@@ -35,6 +35,48 @@ export type Database = {
         }
         Relationships: []
       }
+      coffre_fort: {
+        Row: {
+          created_at: string | null
+          email_identifiant: string | null
+          id: string
+          mot_de_passe_visible: string | null
+          nom: string
+          note: string | null
+          ordre: number | null
+          site_url: string | null
+          telephone: string | null
+          type_entree: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_identifiant?: string | null
+          id?: string
+          mot_de_passe_visible?: string | null
+          nom: string
+          note?: string | null
+          ordre?: number | null
+          site_url?: string | null
+          telephone?: string | null
+          type_entree?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_identifiant?: string | null
+          id?: string
+          mot_de_passe_visible?: string | null
+          nom?: string
+          note?: string | null
+          ordre?: number | null
+          site_url?: string | null
+          telephone?: string | null
+          type_entree?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       commandes: {
         Row: {
           acheteur_id: string | null
@@ -72,6 +114,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      depenses: {
+        Row: {
+          annee_num: number | null
+          categorie: string
+          created_at: string | null
+          date_depense: string
+          devise: string
+          id: string
+          mois_num: number | null
+          montant: number
+          note: string | null
+          semaine_num: number | null
+          titre: string
+        }
+        Insert: {
+          annee_num?: number | null
+          categorie?: string
+          created_at?: string | null
+          date_depense?: string
+          devise?: string
+          id?: string
+          mois_num?: number | null
+          montant?: number
+          note?: string | null
+          semaine_num?: number | null
+          titre: string
+        }
+        Update: {
+          annee_num?: number | null
+          categorie?: string
+          created_at?: string | null
+          date_depense?: string
+          devise?: string
+          id?: string
+          mois_num?: number | null
+          montant?: number
+          note?: string | null
+          semaine_num?: number | null
+          titre?: string
+        }
+        Relationships: []
+      }
+      liens_contacts: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          nom: string
+          ordre: number | null
+          type_entree: string
+          valeur: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          nom: string
+          ordre?: number | null
+          type_entree?: string
+          valeur: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          nom?: string
+          ordre?: number | null
+          type_entree?: string
+          valeur?: string
+        }
+        Relationships: []
+      }
+      medias: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          nom: string
+          taille_bytes: number | null
+          type_media: string
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          nom: string
+          taille_bytes?: number | null
+          type_media?: string
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          nom?: string
+          taille_bytes?: number | null
+          type_media?: string
+          url?: string
+        }
+        Relationships: []
       }
       produits: {
         Row: {
@@ -116,6 +260,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          access_code_hash: string
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          nom: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_code_hash?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          nom?: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_code_hash?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          nom?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
