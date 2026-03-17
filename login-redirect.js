@@ -1,8 +1,19 @@
-// login-redirect.js
-document.addEventListener("DOMContentLoaded", function() {
-    // Vérifie si l'utilisateur est connecté
+function checkUser() {
     if (window.currentUser && window.currentUser.loggedIn) {
-        // Redirige automatiquement vers le dashboard
-        window.location.href = "/dashboard"; // change "/dashboard" si ton dashboard a un autre chemin
+        window.location.href = "/dashboard";
+    } 
+    else if (window.currentUser && !window.currentUser.loggedIn) {
+        window.location.href = "/";
     }
-});
+}
+
+let attempts = 0;
+const maxAttempts = 20;
+
+const interval = setInterval(() => {
+    if (window.currentUser !== undefined || attempts >= maxAttempts) {
+        checkUser();
+        clearInterval(interval);
+    }
+    attempts++;
+}, 300);
