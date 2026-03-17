@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          access_code_hash: string
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          features: Json
+          id: string
+          is_active: boolean
+          login_token: string | null
+          nom: string
+          theme_color: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_code_hash?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          login_token?: string | null
+          nom: string
+          theme_color?: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_code_hash?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          login_token?: string | null
+          nom?: string
+          theme_color?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -147,6 +189,48 @@ export type Database = {
           categorie?: string
           created_at?: string | null
           date_depense?: string
+          devise?: string
+          id?: string
+          mois_num?: number | null
+          montant?: number
+          note?: string | null
+          semaine_num?: number | null
+          titre?: string
+        }
+        Relationships: []
+      }
+      entrees: {
+        Row: {
+          annee_num: number | null
+          categorie: string
+          created_at: string | null
+          date_entree: string
+          devise: string
+          id: string
+          mois_num: number | null
+          montant: number
+          note: string | null
+          semaine_num: number | null
+          titre: string
+        }
+        Insert: {
+          annee_num?: number | null
+          categorie?: string
+          created_at?: string | null
+          date_entree?: string
+          devise?: string
+          id?: string
+          mois_num?: number | null
+          montant?: number
+          note?: string | null
+          semaine_num?: number | null
+          titre: string
+        }
+        Update: {
+          annee_num?: number | null
+          categorie?: string
+          created_at?: string | null
+          date_entree?: string
           devise?: string
           id?: string
           mois_num?: number | null
