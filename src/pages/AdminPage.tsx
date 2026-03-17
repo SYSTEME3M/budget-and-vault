@@ -61,7 +61,7 @@ export default function AdminPage() {
   const loadUsers = async () => {
     setLoading(true);
     const { data } = await supabase.from("app_users").select("*").order("created_at", { ascending: false });
-    setUsers((data || []) as AppUser[]);
+    setUsers((data || []) as unknown as AppUser[]);
     setLoading(false);
   };
 
