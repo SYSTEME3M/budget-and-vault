@@ -1,55 +1,30 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatAmount, convertAmount, playSuccessSound } from "@/lib/app-utils";
+import { formatAmount, convertAmount, playSuccessSound, getWeekNumber, getMondayOfWeek } from "@/lib/app-utils";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Plus, Trash2, Download, TrendingDown, Calendar, ChevronDown, ChevronUp,
-  AlertCircle, BarChart2, Filter
-} from "lucide-react";
+import { Plus, Trash2, Download, TrendingDown, Filter, AlertCircle, BarChart2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 type Devise = "XOF" | "USD";
+type Period = "jour" | "semaine" | "mois" | "annee" | "historique";
 
 const CATEGORIES = [
   "Alimentation", "Transport", "Santé", "Éducation", "Vêtements",
   "Loisirs", "Logement", "Factures", "Famille", "Téléphone",
   "Internet", "Épargne", "Restaurant", "Voyage", "Carburant",
-  "Médicaments", "Courses", "Cadeaux", "Sport", "Autre"
+  "Médicaments", "Courses", "Cadeaux", "Sport", "Électronique",
+  "Eau", "Électricité", "Abonnement", "Réparation", "Autre"
 ];
 
+const MONTHS = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin", "Juill.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
+
 interface Depense {
-  id: string;
-  titre: string;
-  montant: number;
-  devise: string;
-  categorie: string;
-  note?: string;
-  date_depense: string;
-  semaine_num?: number;
-  mois_num?: number;
-  annee_num?: number;
-}
-
-type Period = "jour" | "semaine" | "mois" | "annee" | "historique";
-
-function getWeekNumber(d: Date) {
-  const date = new Date(d);
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-  const week1 = new Date(date.getFullYear(), 0, 4);
-  return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-}
-
-function getMondayOfWeek(weekNum: number, year: number): Date {
-  const jan4 = new Date(year, 0, 4);
-  const week1Monday = new Date(jan4);
-  week1Monday.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7);
-  const monday = new Date(week1Monday);
-  monday.setDate(week1Monday.getDate() + (weekNum - 1) * 7);
-  return monday;
+  id: string; titre: string; montant: number; devise: string;
+  categorie: string; note?: string; date_depense: string;
+  semaine_num?: number; mois_num?: number; annee_num?: number; created_at?: string;
 }
 
 export default function DepensesPage() {
@@ -57,8 +32,8 @@ export default function DepensesPage() {
   const [devise, setDevise] = useState<Devise>("XOF");
   const [period, setPeriod] = useState<Period>("semaine");
   const [histoPeriod, setHistoPeriod] = useState<"semaine" | "mois" | "annee">("mois");
-  const [histoValue, setHistoValue] = useState<number>(new Date().getMonth() + 1);
-  const [histoYear, setHistoYear] = useState<number>(new Date().getFullYear());
+  const [histoValue, setHistoValue] = useState(new Date().getMonth() + 1);
+  const [histoYear, setHistoYear] = useState(new Date().getFullYear());
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
@@ -73,14 +48,14 @@ export default function DepensesPage() {
 
   const [form, setForm] = useState({
     titre: "", montant: "", devise: "XOF" as Devise,
-    categorie: "Autre", note: "", date_depense: today
+    categorie: "Alimentation", note: "", date_depense: today
   });
 
   useEffect(() => { loadDepenses(); }, []);
 
   const loadDepenses = async () => {
     setLoading(true);
-    const { data } = await supabase.from("depenses").select("*").order("date_depense", { ascending: false });
+    const { data } = await supabase.from("depenses").select("*").order("date_depense", { ascending: false }).order("created_at", { ascending: false });
     setDepenses(data || []);
     setLoading(false);
   };
@@ -90,7 +65,6 @@ export default function DepensesPage() {
       d.categorie.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCat ? d.categorie === filterCat : true;
     if (!matchSearch || !matchCat) return false;
-
     if (period === "jour") return d.date_depense === today;
     if (period === "semaine") return d.semaine_num === weekNum && d.annee_num === year;
     if (period === "mois") return d.mois_num === month && d.annee_num === year;
@@ -103,9 +77,8 @@ export default function DepensesPage() {
     return true;
   });
 
-  const totalFiltered = filtered.reduce((s, d) => {
-    const montantXOF = d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant);
-    return s + montantXOF;
+  const totalXOF = filtered.reduce((s, d) => {
+    return s + (d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant));
   }, 0);
 
   const fmt = (v: number) => formatAmount(devise === "XOF" ? v : convertAmount(v, "XOF", "USD"), devise);
@@ -114,25 +87,22 @@ export default function DepensesPage() {
     e.preventDefault();
     if (!form.titre || !form.montant) return;
     const { error } = await supabase.from("depenses").insert({
-      titre: form.titre,
-      montant: parseFloat(form.montant),
-      devise: form.devise,
-      categorie: form.categorie,
-      note: form.note || null,
-      date_depense: form.date_depense,
+      titre: form.titre, montant: parseFloat(form.montant), devise: form.devise,
+      categorie: form.categorie, note: form.note || null, date_depense: form.date_depense,
     });
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       playSuccessSound();
       toast({ title: "✅ Succès !", description: "Dépense enregistrée." });
-      setForm({ titre: "", montant: "", devise: "XOF", categorie: "Autre", note: "", date_depense: today });
+      setForm({ titre: "", montant: "", devise: "XOF", categorie: "Alimentation", note: "", date_depense: today });
       setShowForm(false);
       loadDepenses();
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cette dépense ?")) return;
     await supabase.from("depenses").delete().eq("id", id);
     toast({ title: "Supprimé" });
     loadDepenses();
@@ -141,31 +111,23 @@ export default function DepensesPage() {
   const exportExcel = () => {
     const data = filtered.map(d => ({
       "Titre": d.titre,
-      "Montant (XOF)": d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant),
-      "Montant (USD)": d.devise === "XOF" ? convertAmount(Number(d.montant), "XOF", "USD").toFixed(2) : Number(d.montant),
-      "Catégorie": d.categorie,
-      "Date": d.date_depense,
-      "Note": d.note || "",
+      "Montant original": `${Number(d.montant).toLocaleString()} ${d.devise}`,
+      "Montant FCFA": d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant),
+      "Montant USD": (d.devise === "XOF" ? convertAmount(Number(d.montant), "XOF", "USD") : Number(d.montant)).toFixed(2),
+      "Catégorie": d.categorie, "Date": d.date_depense, "Note": d.note || "",
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dépenses");
-    XLSX.writeFile(wb, `depenses_${period}_${today}.xlsx`);
-  };
-
-  const periodLabels: Record<Period, string> = {
-    jour: "Aujourd'hui",
-    semaine: "Cette semaine",
-    mois: "Ce mois",
-    annee: "Cette année",
-    historique: "Historique",
+    XLSX.writeFile(wb, `depenses_${today}.xlsx`);
   };
 
   const availableWeeks = [...new Set(depenses.map(d => `${d.semaine_num}-${d.annee_num}`))].sort();
-  const availableMonths = [...new Set(depenses.map(d => `${d.mois_num}-${d.annee_num}`))].sort();
   const availableYears = [...new Set(depenses.map(d => String(d.annee_num)))].sort();
 
-  const MONTHS = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin", "Juill.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
+  const periodLabels: Record<Period, string> = {
+    jour: "Aujourd'hui", semaine: "Cette semaine", mois: "Ce mois", annee: "Cette année", historique: "Historique",
+  };
 
   return (
     <AppLayout searchQuery={search} onSearchChange={setSearch}>
@@ -173,18 +135,16 @@ export default function DepensesPage() {
         {/* Header */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
-            <h1 className="font-display font-bold text-xl text-foreground">Dépenses</h1>
+            <h1 className="font-display font-bold text-xl flex items-center gap-2">
+              <TrendingDown className="w-6 h-6 text-destructive" /> Dépenses
+            </h1>
             <p className="text-sm text-muted-foreground">Gérez et suivez vos dépenses</p>
           </div>
-          <select
-            value={devise}
-            onChange={(e) => setDevise(e.target.value as Devise)}
-            className="border border-border rounded-lg px-3 py-2 text-sm bg-card font-semibold"
-          >
+          <select value={devise} onChange={(e) => setDevise(e.target.value as Devise)} className="border border-border rounded-lg px-3 py-2 text-sm bg-card font-semibold">
             <option value="XOF">XOF - FCFA</option>
             <option value="USD">USD - $</option>
           </select>
-          <Button onClick={exportExcel} variant="outline" size="sm" className="gap-1.5">
+          <Button onClick={exportExcel} variant="outline" size="sm" className="gap-1.5 text-xs">
             <Download className="w-4 h-4" /> Excel
           </Button>
           <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-1.5 bg-primary text-primary-foreground">
@@ -201,7 +161,7 @@ export default function DepensesPage() {
             <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input placeholder="Titre *" value={form.titre} onChange={e => setForm(f => ({ ...f, titre: e.target.value }))} required />
               <div className="flex gap-2">
-                <Input type="number" placeholder="Montant *" value={form.montant} onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} required className="flex-1" />
+                <Input type="number" step="0.01" placeholder="Montant *" value={form.montant} onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} required className="flex-1" />
                 <select value={form.devise} onChange={e => setForm(f => ({ ...f, devise: e.target.value as Devise }))} className="border border-border rounded-lg px-3 text-sm bg-card">
                   <option value="XOF">FCFA</option>
                   <option value="USD">USD</option>
@@ -223,13 +183,8 @@ export default function DepensesPage() {
         {/* Period tabs */}
         <div className="flex flex-wrap gap-2">
           {(Object.keys(periodLabels) as Period[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                period === p ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary text-secondary-foreground hover:bg-primary/10"
-              }`}
-            >
+            <button key={p} onClick={() => setPeriod(p)}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${period === p ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary text-secondary-foreground hover:bg-primary/10"}`}>
               {periodLabels[p]}
             </button>
           ))}
@@ -249,7 +204,7 @@ export default function DepensesPage() {
                   {availableWeeks.map(w => {
                     const [wn, wy] = w.split("-").map(Number);
                     const mon = getMondayOfWeek(wn, wy);
-                    return <option key={w} value={wn}>Semaine {wn} — {mon.toLocaleDateString("fr-FR")}</option>;
+                    return <option key={w} value={wn}>Sem. {wn} — {mon.toLocaleDateString("fr-FR")}</option>;
                   })}
                 </select>
                 <select value={histoYear} onChange={e => setHistoYear(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
@@ -280,11 +235,12 @@ export default function DepensesPage() {
           <Filter className="w-4 h-4 text-muted-foreground" />
           <button onClick={() => setFilterCat("")} className={`px-3 py-1 rounded-full text-xs font-medium ${!filterCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Tout</button>
           {CATEGORIES.map(c => (
-            <button key={c} onClick={() => setFilterCat(c === filterCat ? "" : c)} className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${filterCat === c ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"}`}>{c}</button>
+            <button key={c} onClick={() => setFilterCat(c === filterCat ? "" : c)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${filterCat === c ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"}`}>{c}</button>
           ))}
         </div>
 
-        {/* Total card */}
+        {/* Total */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 bg-destructive-bg border border-destructive/20 rounded-xl p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -292,17 +248,15 @@ export default function DepensesPage() {
             </div>
             <div>
               <div className="text-sm text-muted-foreground font-medium">Total — {periodLabels[period]}</div>
-              <div className="font-display font-bold text-2xl text-destructive">{fmt(totalFiltered)}</div>
+              <div className="font-display font-black text-2xl text-destructive">{fmt(totalXOF)}</div>
               <div className="text-xs text-muted-foreground">{filtered.length} dépense(s)</div>
             </div>
           </div>
           <div className="bg-accent-bg border border-accent/20 rounded-xl p-4 flex items-center gap-4">
             <BarChart2 className="w-8 h-8 text-accent-foreground" />
             <div>
-              <div className="text-sm text-muted-foreground font-medium">En USD</div>
-              <div className="font-display font-bold text-xl text-accent-foreground">
-                {formatAmount(convertAmount(totalFiltered, "XOF", "USD"), "USD")}
-              </div>
+              <div className="text-sm text-muted-foreground">Équiv. USD</div>
+              <div className="font-display font-bold text-xl text-accent-foreground">{formatAmount(convertAmount(totalXOF, "XOF", "USD"), "USD")}</div>
             </div>
           </div>
         </div>
@@ -314,7 +268,10 @@ export default function DepensesPage() {
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
               <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">Aucune dépense pour cette période</p>
+              <p className="text-muted-foreground text-sm">Aucune dépense pour cette période</p>
+              <Button onClick={() => setShowForm(true)} className="mt-3 bg-primary text-primary-foreground" size="sm">
+                <Plus className="w-4 h-4 mr-1" /> Ajouter une dépense
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -322,11 +279,11 @@ export default function DepensesPage() {
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Titre</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Catégorie</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Catégorie</th>
                     <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Montant</th>
-                    <th className="text-right px-4 py-3 font-semibold text-muted-foreground">En {devise}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Date</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="text-right px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">En {devise}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Date</th>
+                    <th className="px-3 py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -338,13 +295,13 @@ export default function DepensesPage() {
                           <div className="font-medium">{d.titre}</div>
                           {d.note && <div className="text-xs text-muted-foreground">{d.note}</div>}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <span className="bg-primary-bg text-primary text-xs font-semibold px-2 py-0.5 rounded-full">{d.categorie}</span>
                         </td>
                         <td className="px-4 py-3 text-right font-medium">{Number(d.montant).toLocaleString()} {d.devise}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-destructive">{fmt(montantXOF)}</td>
-                        <td className="px-4 py-3 text-center text-muted-foreground">{d.date_depense}</td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-right font-bold text-destructive hidden md:table-cell">{fmt(montantXOF)}</td>
+                        <td className="px-4 py-3 text-center text-muted-foreground text-xs hidden sm:table-cell">{d.date_depense}</td>
+                        <td className="px-3 py-3 text-center">
                           <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-destructive-bg hover:text-destructive transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
