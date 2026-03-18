@@ -1,6 +1,21 @@
--- Table des prêts (quelqu'un emprunte chez vous OU vous empruntez chez quelqu'un)
+-- Activer extension UUID
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Fonction pour mettre à jour updated_at automatiquement
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =========================
+-- TABLE DES PRETS
+-- =========================
 CREATE TABLE public.prets (
-  id uuid NOT NULL DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
+  id uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type text NOT NULL CHECK (type IN ('pret', 'dette')),
   nom_personne text NOT NULL,
   montant numeric NOT NULL DEFAULT 0,
@@ -20,15 +35,23 @@ CREATE TABLE public.prets (
 );
 
 ALTER TABLE public.prets ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Prets accessibles" ON public.prets
-  FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- Policy sécurisée
+CREATE POLICY "Utilisateur voit ses prets"
+ON public.prets
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 CREATE INDEX idx_prets_type ON public.prets(type);
 CREATE INDEX idx_prets_statut ON public.prets(statut);
 
--- Table des remboursements
+-- =========================
+-- TABLE REMBOURSEMENTS
+-- =========================
 CREATE TABLE public.remboursements (
-  id uuid NOT NULL DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
+  id uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   pret_id uuid NOT NULL REFERENCES public.prets(id) ON DELETE CASCADE,
   montant numeric NOT NULL DEFAULT 0,
   devise text NOT NULL DEFAULT 'XOF',
@@ -38,12 +61,20 @@ CREATE TABLE public.remboursements (
 );
 
 ALTER TABLE public.remboursements ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Remboursements accessibles" ON public.remboursements
-  FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- Policy sécurisée
+CREATE POLICY "Utilisateur voit ses remboursements"
+ON public.remboursements
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 CREATE INDEX idx_remboursements_pret ON public.remboursements(pret_id);
 
--- Trigger updated_at pour prets
+-- =========================
+-- TRIGGER updated_at
+-- =========================
 CREATE TRIGGER update_prets_updated_at
 BEFORE UPDATE ON public.prets
-FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
