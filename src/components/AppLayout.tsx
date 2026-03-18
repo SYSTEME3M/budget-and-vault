@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
-  Search, ChevronRight, TrendingUp, TrendingDown, History, Shield
+  Search, ChevronRight, TrendingUp, TrendingDown, History, Shield,
+  HandCoins
 } from "lucide-react";
 import { clearSession } from "@/lib/app-utils";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ const navItems = [
   { path: "/entrees", icon: TrendingUp, label: "Entrées", color: "text-green-400" },
   { path: "/depenses", icon: TrendingDown, label: "Dépenses", color: "text-red-300" },
   { path: "/historique", icon: History, label: "Historique", color: "text-accent" },
+  { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" }, // ⬅️ AJOUT
   { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300" },
   { path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" },
   { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
@@ -43,22 +45,18 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
 
   return (
     <div className="min-h-screen flex bg-muted/30">
-      {/* Mobile overlay */}
       {mobileSidebarOpen && (
         <div className="fixed inset-0 bg-foreground/30 z-20 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed top-0 left-0 h-full z-30 bg-sidebar text-sidebar-foreground flex flex-col
         transition-all duration-300 shadow-brand-lg
         ${sidebarOpen ? "w-56" : "w-14"}
         ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
-        {/* Top accent line */}
         <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-destructive flex-shrink-0" />
 
-        {/* Logo */}
         <div className="flex items-center gap-3 px-3 py-3 border-b border-sidebar-border">
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0 shadow-sm">
             <span className="text-accent-foreground font-display font-black text-sm">M</span>
@@ -77,7 +75,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
           {navItems.map(({ path, icon: Icon, label, color }) => {
             const active = location.pathname === path;
@@ -102,7 +99,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           })}
         </nav>
 
-        {/* Profile + Logout */}
         <div className="p-2.5 border-t border-sidebar-border space-y-1">
           {sidebarOpen && (
             <div className="flex items-center gap-2.5 px-2 py-1.5">
@@ -124,9 +120,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         </div>
       </aside>
 
-      {/* Main content */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${sidebarOpen ? "lg:ml-56" : "lg:ml-14"}`}>
-        {/* Top header */}
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 lg:px-6 h-14 flex items-center gap-3 shadow-sm">
           <button
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -157,7 +151,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           </Link>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 lg:p-6">{children}</main>
 
         <footer className="py-2.5 px-6 border-t border-border text-center text-xs text-muted-foreground">
