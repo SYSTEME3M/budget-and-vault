@@ -14,11 +14,9 @@ import MediasPage from "@/pages/MediasPage";
 import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
 import AdminPage from "@/pages/AdminPage";
-import NotFound from "@/pages/NotFound";
 import PretsPage from "@/pages/PretsPage";
+import NotFound from "@/pages/NotFound";
 
-// Dans les Routes :
-<Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -34,6 +32,7 @@ const App = () => (
           <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
           <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
           <Route path="/historique" element={<AuthGuard><HistoriquePage /></AuthGuard>} />
+          <Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
           <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
           <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
           <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
