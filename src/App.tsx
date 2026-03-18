@@ -15,7 +15,10 @@ import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
+import PretsPage from "@/pages/PretsPage";
 
+// Dans les Routes :
+<Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
 const queryClient = new QueryClient();
 
 const App = () => (
