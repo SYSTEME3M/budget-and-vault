@@ -99,12 +99,13 @@ export function formatDatetime(dt: string): string {
 
 export const SESSION_KEY = "mes_secrets_auth";
 
+// ✅ localStorage à la place de sessionStorage
 export function setSession() {
-  sessionStorage.setItem(SESSION_KEY, "authenticated");
+  localStorage.setItem(SESSION_KEY, "authenticated");
 }
 export function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
 }
 export function isAuthenticated(): boolean {
-  return sessionStorage.getItem(SESSION_KEY) === "authenticated";
+  return localStorage.getItem(SESSION_KEY) === "authenticated";
 }
