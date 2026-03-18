@@ -135,3 +135,4 @@ export default function SignaturePad({ label, onSave, existingSignature }: Signa
       </div>
     </div>
   );
+  }
