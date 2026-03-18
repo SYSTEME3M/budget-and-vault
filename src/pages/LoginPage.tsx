@@ -34,7 +34,7 @@ export default function LoginPage() {
       if (ok) {
         setSession();
         toast({ title: "✅ Accès autorisé", description: "Bienvenue Eric !" });
-        navigate("/dashboard");
+        window.location.href = "/dashboard"; // ⬅️ SEUL CHANGEMENT
       } else {
         toast({ title: "❌ Code incorrect", description: "Veuillez réessayer.", variant: "destructive" });
         setCode("");
