@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatAmount } from "@/lib/app-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, FileDown, ChevronDown, ChevronUp, Trash2, HandCoins, Wallet } from "lucide-react";
+import { Plus, FileDown, ChevronDown, ChevronUp, Trash2, HandCoins, Wallet, Calendar } from "lucide-react";
 import SignaturePad from "@/components/SignaturePad";
 import AppLayout from "@/components/AppLayout";
 
@@ -67,7 +67,6 @@ async function generatePDF(pret: Pret) {
   const noir: [number, number, number] = [15, 23, 42];
   const vert: [number, number, number] = [22, 163, 74];
 
-  // En-tête coloré
   doc.setFillColor(...bleu);
   doc.rect(0, 0, W, 40, "F");
   doc.setTextColor(255, 255, 255);
@@ -81,7 +80,6 @@ async function generatePDF(pret: Pret) {
 
   let y = 52;
 
-  // Bloc infos principales
   doc.setFillColor(...bleuClair);
   doc.roundedRect(margin, y, W - margin * 2, 48, 3, 3, "F");
   doc.setTextColor(...bleu);
@@ -114,7 +112,6 @@ async function generatePDF(pret: Pret) {
 
   y += 58;
 
-  // Échéance
   if (pret.date_echeance) {
     doc.setFillColor(254, 249, 195);
     doc.roundedRect(margin, y, W - margin * 2, 12, 2, 2, "F");
@@ -127,11 +124,6 @@ async function generatePDF(pret: Pret) {
     doc.text(`Date de remboursement prévue : ${ech}`, margin + 5, y + 8);
     y += 20;
   }
-
-  // Corps du contrat
-  doc.setTextColor(...noir);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
 
   const preteur = pret.type === "pret" ? "Eric Kpakpo" : pret.nom_personne;
   const emprunteur = pret.type === "pret" ? pret.nom_personne : "Eric Kpakpo";
@@ -174,7 +166,6 @@ async function generatePDF(pret: Pret) {
 
   y += 8;
 
-  // Statut remboursement
   const statutColor: [number, number, number] =
     pret.statut === "rembourse" ? vert :
     pret.statut === "partiel" ? [59, 130, 246] :
@@ -190,7 +181,6 @@ async function generatePDF(pret: Pret) {
   );
   y += 22;
 
-  // Signatures
   if (y > 220) { doc.addPage(); y = 20; }
 
   doc.setFillColor(...bleuClair);
@@ -203,12 +193,7 @@ async function generatePDF(pret: Pret) {
 
   const sigW = (W - margin * 2 - 10) / 3;
 
-  const drawSigBox = async (
-    title: string,
-    sigData: string | null,
-    nom: string,
-    xPos: number
-  ) => {
+  const drawSigBox = async (title: string, sigData: string | null, nom: string, xPos: number) => {
     doc.setTextColor(...noir);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -216,10 +201,13 @@ async function generatePDF(pret: Pret) {
     doc.setDrawColor(...bleu);
     doc.roundedRect(xPos, y + 3, sigW, 28, 2, 2);
 
-    if (sigData) {
+    // Sécurité : Vérification si c'est bien une base64 image PNG ou JPEG
+    if (sigData && sigData.startsWith("data:image")) {
       try {
         doc.addImage(sigData, "PNG", xPos + 2, y + 5, sigW - 4, 22);
-      } catch {}
+      } catch (e) {
+        console.error("Erreur ajout signature PDF:", e);
+      }
     } else {
       doc.setTextColor(...gris);
       doc.setFontSize(8);
@@ -237,7 +225,6 @@ async function generatePDF(pret: Pret) {
   await drawSigBox("EMPRUNTEUR", pret.signature_emprunteur, emprunteur, margin + sigW + 5);
   await drawSigBox("TÉMOIN", pret.signature_temoin, pret.nom_temoin || "—", margin + (sigW + 5) * 2);
 
-  // Pied de page
   const today = new Date().toLocaleDateString("fr-FR", {
     day: "2-digit", month: "long", year: "numeric",
   });
@@ -251,9 +238,7 @@ async function generatePDF(pret: Pret) {
     W / 2, 291, { align: "center" }
   );
 
-  doc.save(
-    `contrat_pret_${pret.nom_personne.replace(/\s/g, "_")}_${new Date(pret.date_pret).toLocaleDateString("fr-FR").replace(/\//g, "-")}.pdf`
-  );
+  doc.save(`contrat_pret_${pret.nom_personne.replace(/\s/g, "_")}.pdf`);
 }
 
 // ─── Composant principal ──────────────────────────────────
@@ -272,6 +257,7 @@ export default function PretsPage() {
     montant: "",
     devise: "XOF" as Devise,
     objectif: "",
+    date_pret: new Date().toISOString().split("T")[0], // AJOUT : Date par défaut (aujourd'hui)
     date_echeance: "",
     nom_temoin: "",
     note: "",
@@ -301,12 +287,14 @@ export default function PretsPage() {
       toast({ title: "Champs requis", description: "Nom, montant et objectif sont obligatoires.", variant: "destructive" });
       return;
     }
+
     const { error } = await supabase.from("prets").insert({
       type: activeTab,
       nom_personne: form.nom_personne,
       montant: parseFloat(form.montant),
       devise: form.devise,
       objectif: form.objectif,
+      date_pret: form.date_pret, // CORRECTION : On envoie la date du prêt
       date_echeance: form.date_echeance || null,
       nom_temoin: form.nom_temoin || null,
       note: form.note || null,
@@ -314,13 +302,14 @@ export default function PretsPage() {
       signature_emprunteur: form.signature_emprunteur || null,
       signature_temoin: form.signature_temoin || null,
     });
+
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
     toast({ title: "✅ Enregistré", description: `${activeTab === "pret" ? "Prêt" : "Dette"} ajouté avec succès !` });
     setShowForm(false);
-    setForm({ nom_personne: "", montant: "", devise: "XOF", objectif: "", date_echeance: "", nom_temoin: "", note: "", signature_preteur: "", signature_emprunteur: "", signature_temoin: "" });
+    setForm({ nom_personne: "", montant: "", devise: "XOF", objectif: "", date_pret: new Date().toISOString().split("T")[0], date_echeance: "", nom_temoin: "", note: "", signature_preteur: "", signature_emprunteur: "", signature_temoin: "" });
     load();
   };
 
@@ -360,18 +349,16 @@ export default function PretsPage() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-foreground">Prêts & Dettes</h1>
-            <p className="text-sm text-muted-foreground">Gérez vos prêts et dettes avec contrats</p>
+            <p className="text-sm text-muted-foreground">Gérez vos contrats de prêt</p>
           </div>
           <Button onClick={() => setShowForm(!showForm)} className="bg-primary text-white gap-1">
             <Plus className="w-4 h-4" /> Nouveau
           </Button>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-muted rounded-xl p-1">
           {(["pret", "dette"] as TypePret[]).map(tab => (
             <button
@@ -385,7 +372,6 @@ export default function PretsPage() {
           ))}
         </div>
 
-        {/* Formulaire nouveau prêt */}
         {showForm && (
           <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm">
             <h2 className="font-bold text-lg text-foreground">
@@ -428,12 +414,22 @@ export default function PretsPage() {
                   <Input
                     value={form.objectif}
                     onChange={e => setForm({ ...form, objectif: e.target.value })}
-                    placeholder="Ex: Achat de matériel, frais médicaux..."
+                    placeholder="Ex: Achat de matériel..."
+                    className="mt-1"
+                  />
+                </div>
+                {/* AJOUT : Champ Date du prêt */}
+                <div>
+                  <label className="text-sm font-medium">Date du prêt *</label>
+                  <Input
+                    type="date"
+                    value={form.date_pret}
+                    onChange={e => setForm({ ...form, date_pret: e.target.value })}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Date d'échéance</label>
+                  <label className="text-sm font-medium">Date d'échéance (limite)</label>
                   <Input
                     type="date"
                     value={form.date_echeance}
@@ -441,8 +437,8 @@ export default function PretsPage() {
                     className="mt-1"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Nom du témoin</label>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Nom du témoin (optionnel)</label>
                   <Input
                     value={form.nom_temoin}
                     onChange={e => setForm({ ...form, nom_temoin: e.target.value })}
@@ -450,22 +446,12 @@ export default function PretsPage() {
                     className="mt-1"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="text-sm font-medium">Note</label>
-                  <Input
-                    value={form.note}
-                    onChange={e => setForm({ ...form, note: e.target.value })}
-                    placeholder="Note optionnelle..."
-                    className="mt-1"
-                  />
-                </div>
               </div>
 
-              {/* Signatures */}
               <div className="space-y-4 pt-2 border-t border-border">
-                <p className="font-semibold text-sm text-primary">Signatures</p>
+                <p className="font-semibold text-sm text-primary">Signatures numériques</p>
                 <SignaturePad
-                  label="Signature du Prêteur (Vous - Eric Kpakpo)"
+                  label="Signature du Prêteur (Eric Kpakpo)"
                   onSave={sig => setForm({ ...form, signature_preteur: sig })}
                 />
                 <SignaturePad
@@ -481,21 +467,15 @@ export default function PretsPage() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button type="submit" className="flex-1 bg-primary text-white">Enregistrer</Button>
+                <Button type="submit" className="flex-1 bg-primary text-white">Enregistrer le contrat</Button>
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Liste des prêts */}
         {loading ? (
           <div className="text-center py-10 text-muted-foreground">Chargement...</div>
-        ) : filteredPrets.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">
-            <p className="text-4xl mb-3">{activeTab === "pret" ? "🤝" : "💸"}</p>
-            <p>Aucun {activeTab === "pret" ? "prêt" : "dette"} enregistré</p>
-          </div>
         ) : (
           <div className="space-y-3">
             {filteredPrets.map(pret => {
@@ -519,7 +499,7 @@ export default function PretsPage() {
                         <p className="text-lg font-black text-primary mt-1">{formatAmount(pret.montant, pret.devise)}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => generatePDF(pret)} title="Télécharger contrat PDF">
+                        <Button size="sm" variant="ghost" onClick={() => generatePDF(pret)} title="PDF">
                           <FileDown className="w-4 h-4 text-primary" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => handleDelete(pret.id)}>
@@ -530,8 +510,6 @@ export default function PretsPage() {
                         </Button>
                       </div>
                     </div>
-
-                    {/* Barre de progression */}
                     <div className="mt-3">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Remboursé : {formatAmount(pret.montant_rembourse, pret.devise)}</span>
@@ -543,86 +521,54 @@ export default function PretsPage() {
                     </div>
                   </div>
 
-                  {/* Détails expandés */}
                   {isExpanded && (
-                    <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
+                    <div className="border-t border-border px-4 pb-4 pt-3 space-y-3 bg-muted/20">
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Date :</span>{" "}
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Prêt :</span>{" "}
                           <span className="font-medium">{new Date(pret.date_pret).toLocaleDateString("fr-FR")}</span>
                         </div>
                         {pret.date_echeance && (
-                          <div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-red-400" />
                             <span className="text-muted-foreground">Échéance :</span>{" "}
                             <span className="font-medium">{new Date(pret.date_echeance).toLocaleDateString("fr-FR")}</span>
                           </div>
                         )}
-                        {pret.nom_temoin && (
-                          <div>
-                            <span className="text-muted-foreground">Témoin :</span>{" "}
-                            <span className="font-medium">{pret.nom_temoin}</span>
-                          </div>
-                        )}
-                        {pret.note && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Note :</span>{" "}
-                            <span className="font-medium">{pret.note}</span>
-                          </div>
-                        )}
                       </div>
 
-                      {/* Historique remboursements */}
                       {pretRembs.length > 0 && (
-                        <div>
-                          <p className="text-sm font-semibold text-foreground mb-2">Historique des remboursements</p>
-                          <div className="space-y-1">
-                            {pretRembs.map(r => (
-                              <div key={r.id} className="flex justify-between items-center text-sm bg-muted/50 rounded-lg px-3 py-2">
-                                <span>{new Date(r.date_remboursement).toLocaleDateString("fr-FR")}</span>
-                                <span className="font-semibold text-green-600">+{formatAmount(r.montant, r.devise)}</span>
-                                {r.note && <span className="text-muted-foreground text-xs">{r.note}</span>}
-                              </div>
-                            ))}
-                          </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-muted-foreground uppercase">Historique</p>
+                          {pretRembs.map(r => (
+                            <div key={r.id} className="flex justify-between items-center text-xs bg-white rounded border border-border px-2 py-1">
+                              <span>{new Date(r.date_remboursement).toLocaleDateString("fr-FR")}</span>
+                              <span className="font-bold text-green-600">+{formatAmount(r.montant, r.devise)}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
-                      {/* Formulaire remboursement */}
                       {pret.statut !== "rembourse" && (
-                        <>
+                        <div className="pt-2">
                           {showRembForm === pret.id ? (
-                            <div className="bg-green-50 border border-green-200 rounded-xl p-3 space-y-2">
-                              <p className="text-sm font-semibold text-green-800">Ajouter un remboursement</p>
+                            <div className="bg-white border border-green-200 rounded-xl p-3 space-y-2">
                               <Input
                                 type="number"
-                                placeholder="Montant remboursé"
+                                placeholder="Montant"
                                 value={rembForm.montant}
                                 onChange={e => setRembForm({ ...rembForm, montant: e.target.value })}
-                                className="bg-white"
-                              />
-                              <Input
-                                placeholder="Note (optionnel)"
-                                value={rembForm.note}
-                                onChange={e => setRembForm({ ...rembForm, note: e.target.value })}
-                                className="bg-white"
                               />
                               <div className="flex gap-2">
-                                <Button size="sm" className="bg-green-600 text-white flex-1" onClick={() => handleRemboursement(pret)}>
-                                  Confirmer
-                                </Button>
+                                <Button size="sm" className="bg-green-600 text-white flex-1" onClick={() => handleRemboursement(pret)}>Confirmer</Button>
                                 <Button size="sm" variant="outline" onClick={() => setShowRembForm(null)}>Annuler</Button>
                               </div>
                             </div>
                           ) : (
-                            <Button
-                              size="sm"
-                              className="w-full bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => setShowRembForm(pret.id)}
-                            >
-                              + Enregistrer un remboursement
-                            </Button>
+                            <Button size="sm" className="w-full bg-green-600 text-white" onClick={() => setShowRembForm(pret.id)}>+ Remboursement</Button>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
                   )}
