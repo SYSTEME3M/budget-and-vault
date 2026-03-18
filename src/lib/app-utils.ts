@@ -109,4 +109,3 @@ export function clearSession() {
 export function isAuthenticated(): boolean {
   return localStorage.getItem(SESSION_KEY) === "authenticated";
 }
-  }
