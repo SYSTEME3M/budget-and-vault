@@ -1,64 +1,38 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatAmount, convertAmount, playSuccessSound } from "@/lib/app-utils";
+import { formatAmount, convertAmount, playSuccessSound, getWeekNumber, getMondayOfWeek } from "@/lib/app-utils";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Plus, Trash2, Download, TrendingUp, Calendar, Filter, AlertCircle, BarChart2
-} from "lucide-react";
+import { Plus, Trash2, Download, TrendingUp, Filter, AlertCircle, BarChart2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 type Devise = "XOF" | "USD";
+type Period = "jour" | "semaine" | "mois" | "annee" | "historique";
 
 const CATEGORIES_ENTREES = [
   "Salaire", "Freelance", "Commerce", "Investissement", "Cadeau",
   "Remboursement", "Loyer perçu", "Vente", "Prime", "Allocation",
-  "Pension", "Dividendes", "Bonus", "Économies", "Tontine", "Autre"
+  "Pension", "Dividendes", "Bonus", "Économies", "Tontine",
+  "Transfert", "Bourse", "Héritage", "Don", "Autre"
 ];
 
-interface Entree {
-  id: string;
-  titre: string;
-  montant: number;
-  devise: string;
-  categorie: string;
-  note?: string;
-  date_entree: string;
-  semaine_num?: number;
-  mois_num?: number;
-  annee_num?: number;
-}
-
-type Period = "jour" | "semaine" | "mois" | "annee" | "historique";
-
-function getWeekNumber(d: Date) {
-  const date = new Date(d);
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-  const week1 = new Date(date.getFullYear(), 0, 4);
-  return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-}
-
-function getMondayOfWeek(weekNum: number, year: number): Date {
-  const jan4 = new Date(year, 0, 4);
-  const week1Monday = new Date(jan4);
-  week1Monday.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7);
-  const monday = new Date(week1Monday);
-  monday.setDate(week1Monday.getDate() + (weekNum - 1) * 7);
-  return monday;
-}
-
 const MONTHS = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin", "Juill.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
+
+interface Entree {
+  id: string; titre: string; montant: number; devise: string;
+  categorie: string; note?: string; date_entree: string;
+  semaine_num?: number; mois_num?: number; annee_num?: number; created_at?: string;
+}
 
 export default function EntreesPage() {
   const [entrees, setEntrees] = useState<Entree[]>([]);
   const [devise, setDevise] = useState<Devise>("XOF");
   const [period, setPeriod] = useState<Period>("semaine");
   const [histoPeriod, setHistoPeriod] = useState<"semaine" | "mois" | "annee">("mois");
-  const [histoValue, setHistoValue] = useState<number>(new Date().getMonth() + 1);
-  const [histoYear, setHistoYear] = useState<number>(new Date().getFullYear());
+  const [histoValue, setHistoValue] = useState(new Date().getMonth() + 1);
+  const [histoYear, setHistoYear] = useState(new Date().getFullYear());
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
@@ -80,7 +54,7 @@ export default function EntreesPage() {
 
   const loadEntrees = async () => {
     setLoading(true);
-    const { data } = await supabase.from("entrees").select("*").order("date_entree", { ascending: false });
+    const { data } = await supabase.from("entrees").select("*").order("date_entree", { ascending: false }).order("created_at", { ascending: false });
     setEntrees(data || []);
     setLoading(false);
   };
@@ -90,7 +64,6 @@ export default function EntreesPage() {
       d.categorie.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCat ? d.categorie === filterCat : true;
     if (!matchSearch || !matchCat) return false;
-
     if (period === "jour") return d.date_entree === today;
     if (period === "semaine") return d.semaine_num === weekNum && d.annee_num === year;
     if (period === "mois") return d.mois_num === month && d.annee_num === year;
@@ -103,9 +76,8 @@ export default function EntreesPage() {
     return true;
   });
 
-  const totalFiltered = filtered.reduce((s, d) => {
-    const montantXOF = d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant);
-    return s + montantXOF;
+  const totalXOF = filtered.reduce((s, d) => {
+    return s + (d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant));
   }, 0);
 
   const fmt = (v: number) => formatAmount(devise === "XOF" ? v : convertAmount(v, "XOF", "USD"), devise);
@@ -114,12 +86,8 @@ export default function EntreesPage() {
     e.preventDefault();
     if (!form.titre || !form.montant) return;
     const { error } = await supabase.from("entrees").insert({
-      titre: form.titre,
-      montant: parseFloat(form.montant),
-      devise: form.devise,
-      categorie: form.categorie,
-      note: form.note || null,
-      date_entree: form.date_entree,
+      titre: form.titre, montant: parseFloat(form.montant), devise: form.devise,
+      categorie: form.categorie, note: form.note || null, date_entree: form.date_entree,
     });
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -133,6 +101,7 @@ export default function EntreesPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cette entrée ?")) return;
     await supabase.from("entrees").delete().eq("id", id);
     toast({ title: "Supprimé" });
     loadEntrees();
@@ -141,25 +110,23 @@ export default function EntreesPage() {
   const exportExcel = () => {
     const data = filtered.map(d => ({
       "Titre": d.titre,
-      "Montant (XOF)": d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant),
-      "Montant (USD)": d.devise === "XOF" ? convertAmount(Number(d.montant), "XOF", "USD").toFixed(2) : Number(d.montant),
-      "Catégorie": d.categorie,
-      "Date": d.date_entree,
-      "Note": d.note || "",
+      "Montant original": `${Number(d.montant).toLocaleString()} ${d.devise}`,
+      "Montant FCFA": d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant),
+      "Montant USD": (d.devise === "XOF" ? convertAmount(Number(d.montant), "XOF", "USD") : Number(d.montant)).toFixed(2),
+      "Catégorie": d.categorie, "Date": d.date_entree, "Note": d.note || "",
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Entrées");
-    XLSX.writeFile(wb, `entrees_${period}_${today}.xlsx`);
-  };
-
-  const periodLabels: Record<Period, string> = {
-    jour: "Aujourd'hui", semaine: "Cette semaine",
-    mois: "Ce mois", annee: "Cette année", historique: "Historique",
+    XLSX.writeFile(wb, `entrees_${today}.xlsx`);
   };
 
   const availableWeeks = [...new Set(entrees.map(d => `${d.semaine_num}-${d.annee_num}`))].sort();
   const availableYears = [...new Set(entrees.map(d => String(d.annee_num)))].sort();
+
+  const periodLabels: Record<Period, string> = {
+    jour: "Aujourd'hui", semaine: "Cette semaine", mois: "Ce mois", annee: "Cette année", historique: "Historique",
+  };
 
   return (
     <AppLayout searchQuery={search} onSearchChange={setSearch}>
@@ -170,20 +137,16 @@ export default function EntreesPage() {
             <h1 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-green-600" /> Entrées & Revenus
             </h1>
-            <p className="text-sm text-muted-foreground">Suivez ce que vous gagnez</p>
+            <p className="text-sm text-muted-foreground">Ce que vous gagnez</p>
           </div>
-          <select
-            value={devise}
-            onChange={(e) => setDevise(e.target.value as Devise)}
-            className="border border-border rounded-lg px-3 py-2 text-sm bg-card font-semibold"
-          >
+          <select value={devise} onChange={(e) => setDevise(e.target.value as Devise)} className="border border-border rounded-lg px-3 py-2 text-sm bg-card font-semibold">
             <option value="XOF">XOF - FCFA</option>
             <option value="USD">USD - $</option>
           </select>
-          <Button onClick={exportExcel} variant="outline" size="sm" className="gap-1.5">
+          <Button onClick={exportExcel} variant="outline" size="sm" className="gap-1.5 text-xs">
             <Download className="w-4 h-4" /> Excel
           </Button>
-          <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-1.5 bg-green-600 text-white hover:bg-green-700">
+          <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
             <Plus className="w-4 h-4" /> Ajouter
           </Button>
         </div>
@@ -197,7 +160,7 @@ export default function EntreesPage() {
             <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input placeholder="Titre *" value={form.titre} onChange={e => setForm(f => ({ ...f, titre: e.target.value }))} required />
               <div className="flex gap-2">
-                <Input type="number" placeholder="Montant *" value={form.montant} onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} required className="flex-1" />
+                <Input type="number" step="0.01" placeholder="Montant *" value={form.montant} onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} required className="flex-1" />
                 <select value={form.devise} onChange={e => setForm(f => ({ ...f, devise: e.target.value as Devise }))} className="border border-border rounded-lg px-3 text-sm bg-card">
                   <option value="XOF">FCFA</option>
                   <option value="USD">USD</option>
@@ -210,7 +173,7 @@ export default function EntreesPage() {
               <Input placeholder="Note (optionnel)" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="sm:col-span-2" />
               <div className="sm:col-span-2 flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
-                <Button type="submit" className="bg-green-600 text-white hover:bg-green-700">✅ Enregistrer</Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">✅ Enregistrer</Button>
               </div>
             </form>
           </div>
@@ -220,9 +183,7 @@ export default function EntreesPage() {
         <div className="flex flex-wrap gap-2">
           {(Object.keys(periodLabels) as Period[]).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
-                period === p ? "bg-green-600 text-white shadow-sm" : "bg-secondary text-secondary-foreground hover:bg-green-50"
-              }`}>
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${period === p ? "bg-green-600 text-white shadow-sm" : "bg-secondary text-secondary-foreground hover:bg-green-50"}`}>
               {periodLabels[p]}
             </button>
           ))}
@@ -242,7 +203,7 @@ export default function EntreesPage() {
                   {availableWeeks.map(w => {
                     const [wn, wy] = w.split("-").map(Number);
                     const mon = getMondayOfWeek(wn, wy);
-                    return <option key={w} value={wn}>Semaine {wn} — {mon.toLocaleDateString("fr-FR")}</option>;
+                    return <option key={w} value={wn}>Sem. {wn} — {mon.toLocaleDateString("fr-FR")}</option>;
                   })}
                 </select>
                 <select value={histoYear} onChange={e => setHistoYear(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
@@ -273,11 +234,12 @@ export default function EntreesPage() {
           <Filter className="w-4 h-4 text-muted-foreground" />
           <button onClick={() => setFilterCat("")} className={`px-3 py-1 rounded-full text-xs font-medium ${!filterCat ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}>Tout</button>
           {CATEGORIES_ENTREES.map(c => (
-            <button key={c} onClick={() => setFilterCat(c === filterCat ? "" : c)} className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${filterCat === c ? "bg-green-600 text-white" : "bg-muted text-muted-foreground hover:bg-green-50"}`}>{c}</button>
+            <button key={c} onClick={() => setFilterCat(c === filterCat ? "" : c)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${filterCat === c ? "bg-green-600 text-white" : "bg-muted text-muted-foreground hover:bg-green-50"}`}>{c}</button>
           ))}
         </div>
 
-        {/* Total card */}
+        {/* Total */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -285,17 +247,15 @@ export default function EntreesPage() {
             </div>
             <div>
               <div className="text-sm text-muted-foreground font-medium">Total — {periodLabels[period]}</div>
-              <div className="font-display font-bold text-2xl text-green-700">{fmt(totalFiltered)}</div>
+              <div className="font-display font-black text-2xl text-green-700">{fmt(totalXOF)}</div>
               <div className="text-xs text-muted-foreground">{filtered.length} entrée(s)</div>
             </div>
           </div>
           <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
             <BarChart2 className="w-8 h-8 text-muted-foreground" />
             <div>
-              <div className="text-sm text-muted-foreground font-medium">En USD</div>
-              <div className="font-display font-bold text-xl text-green-700">
-                {formatAmount(convertAmount(totalFiltered, "XOF", "USD"), "USD")}
-              </div>
+              <div className="text-sm text-muted-foreground">Équiv. USD</div>
+              <div className="font-display font-bold text-xl text-green-700">{formatAmount(convertAmount(totalXOF, "XOF", "USD"), "USD")}</div>
             </div>
           </div>
         </div>
@@ -307,7 +267,10 @@ export default function EntreesPage() {
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
               <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">Aucune entrée pour cette période</p>
+              <p className="text-muted-foreground text-sm">Aucune entrée pour cette période</p>
+              <Button onClick={() => setShowForm(true)} className="mt-3 bg-green-600 hover:bg-green-700 text-white" size="sm">
+                <Plus className="w-4 h-4 mr-1" /> Ajouter une entrée
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -315,11 +278,11 @@ export default function EntreesPage() {
                 <thead>
                   <tr className="bg-green-50 border-b border-border">
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Titre</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Catégorie</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Catégorie</th>
                     <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Montant</th>
-                    <th className="text-right px-4 py-3 font-semibold text-muted-foreground">En {devise}</th>
-                    <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Date</th>
-                    <th className="px-4 py-3"></th>
+                    <th className="text-right px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">En {devise}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Date</th>
+                    <th className="px-3 py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -331,13 +294,13 @@ export default function EntreesPage() {
                           <div className="font-medium">{d.titre}</div>
                           {d.note && <div className="text-xs text-muted-foreground">{d.note}</div>}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">{d.categorie}</span>
                         </td>
                         <td className="px-4 py-3 text-right font-medium">{Number(d.montant).toLocaleString()} {d.devise}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-green-700">{fmt(montantXOF)}</td>
-                        <td className="px-4 py-3 text-center text-muted-foreground">{d.date_entree}</td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-right font-bold text-green-700 hidden md:table-cell">{fmt(montantXOF)}</td>
+                        <td className="px-4 py-3 text-center text-muted-foreground text-xs hidden sm:table-cell">{d.date_entree}</td>
+                        <td className="px-3 py-3 text-center">
                           <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
