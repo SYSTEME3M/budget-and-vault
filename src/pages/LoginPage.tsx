@@ -12,12 +12,18 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     ensureProfile();
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
+
+  const clockStr = time.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dateStr = time.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,44 +47,48 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background décor */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary opacity-5" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-accent opacity-10" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full border border-primary opacity-5" />
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-destructive" />
+        <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-primary opacity-5" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-accent opacity-10" />
+        <div className="absolute top-1/3 left-1/4 w-3 h-3 rounded-full bg-accent opacity-40" />
+        <div className="absolute bottom-1/3 right-1/4 w-2 h-2 rounded-full bg-destructive opacity-30" />
       </div>
 
-      <div className="w-full max-w-md animate-fade-in-up relative z-10">
-        {/* Card principale */}
+      <div className="w-full max-w-sm animate-fade-in-up relative z-10">
+        {/* Clock */}
+        <div className="text-center mb-4">
+          <div className="font-mono text-3xl font-bold text-primary tracking-wider">{clockStr}</div>
+          <div className="text-sm text-muted-foreground capitalize mt-0.5">{dateStr}</div>
+        </div>
+
+        {/* Card */}
         <div className="bg-card border border-border rounded-2xl shadow-brand-lg overflow-hidden">
           {/* Header bleu */}
-          <div className="bg-primary px-8 py-10 text-center relative">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-2 left-6 w-16 h-16 rounded-full border-2 border-white" />
-              <div className="absolute bottom-2 right-6 w-10 h-10 rounded-full border-2 border-white" />
+          <div className="bg-primary px-8 py-8 text-center relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 pointer-events-none">
+              <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full border-2 border-white" />
+              <div className="absolute -bottom-4 right-16 w-20 h-20 rounded-full border-2 border-white" />
+              <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white" />
             </div>
-            {/* Photo profil */}
-            <div className="relative inline-block mb-4">
+            <div className="relative inline-block mb-3">
               <div className="w-24 h-24 rounded-full border-4 border-accent overflow-hidden mx-auto shadow-brand-lg">
-                <img
-                  src={PROFILE_PHOTO}
-                  alt="Eric Kpakpo"
-                  className="w-full h-full object-cover"
-                />
+                <img src={PROFILE_PHOTO} alt="Eric Kpakpo" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-accent rounded-full flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-accent rounded-full flex items-center justify-center shadow-sm">
                 <Shield className="w-4 h-4 text-accent-foreground" />
               </div>
             </div>
-            <h1 className="font-display text-2xl font-bold text-primary-foreground">MES SECRETS</h1>
-            <p className="text-primary-foreground/70 text-sm mt-1">Application privée de Eric Kpakpo</p>
+            <h1 className="font-display text-2xl font-black text-primary-foreground tracking-wide">MES SECRETS</h1>
+            <p className="text-primary-foreground/70 text-xs mt-1">Application privée • Eric Kpakpo</p>
           </div>
 
           {/* Form */}
-          <div className="px-8 py-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 bg-primary-bg text-primary px-4 py-2 rounded-full text-sm font-semibold">
+          <div className="px-7 py-7">
+            <div className="text-center mb-5">
+              <div className="inline-flex items-center gap-2 bg-primary-bg text-primary px-4 py-2 rounded-full text-sm font-semibold border border-primary/20">
                 <Lock className="w-4 h-4" />
                 Entrer votre code d'accès
               </div>
@@ -88,10 +98,10 @@ export default function LoginPage() {
               <div className="relative">
                 <Input
                   type={showCode ? "text" : "password"}
-                  placeholder="Code d'accès..."
+                  placeholder="••••••••"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="h-12 text-center text-lg tracking-widest font-mono pr-12 border-2 focus:border-primary"
+                  className="h-12 text-center text-xl tracking-[0.4em] font-mono pr-12 border-2 focus:border-primary rounded-xl"
                   autoFocus
                 />
                 <button
@@ -106,7 +116,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={loading || !code.trim()}
-                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+                className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-brand"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -122,13 +132,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">ERIC KPAKPO</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            <div className="mt-4 flex justify-center gap-4">
+            <div className="mt-5 flex justify-center gap-3">
               <div className="w-3 h-3 rounded-full bg-primary" />
               <div className="w-3 h-3 rounded-full bg-accent" />
               <div className="w-3 h-3 rounded-full bg-destructive" />
