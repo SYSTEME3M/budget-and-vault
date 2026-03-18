@@ -1,4 +1,4 @@
--- Activer extension UUID
+-- Activer l'extension UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Fonction pour mettre à jour updated_at automatiquement
@@ -10,12 +10,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- =========================
--- TABLE DES PRETS
--- =========================
+-- Table des prêts
 CREATE TABLE public.prets (
   id uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL, -- sécurité avec auth.uid()
   type text NOT NULL CHECK (type IN ('pret', 'dette')),
   nom_personne text NOT NULL,
   montant numeric NOT NULL DEFAULT 0,
@@ -34,24 +32,21 @@ CREATE TABLE public.prets (
   updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Activer RLS
 ALTER TABLE public.prets ENABLE ROW LEVEL SECURITY;
 
--- Policy sécurisée
-CREATE POLICY "Utilisateur voit ses prets"
+-- Politique sécurisée avec auth.uid()
+CREATE POLICY "Prets accessibles"
 ON public.prets
 FOR ALL
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+TO public
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
 
-CREATE INDEX idx_prets_type ON public.prets(type);
-CREATE INDEX idx_prets_statut ON public.prets(statut);
-
--- =========================
--- TABLE REMBOURSEMENTS
--- =========================
+-- Table des remboursements
 CREATE TABLE public.remboursements (
   id uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL, -- sécurité avec auth.uid()
   pret_id uuid NOT NULL REFERENCES public.prets(id) ON DELETE CASCADE,
   montant numeric NOT NULL DEFAULT 0,
   devise text NOT NULL DEFAULT 'XOF',
@@ -60,21 +55,18 @@ CREATE TABLE public.remboursements (
   created_at timestamp with time zone DEFAULT now()
 );
 
+-- Activer RLS
 ALTER TABLE public.remboursements ENABLE ROW LEVEL SECURITY;
 
--- Policy sécurisée
-CREATE POLICY "Utilisateur voit ses remboursements"
+-- Politique sécurisée avec auth.uid()
+CREATE POLICY "Remboursements accessibles"
 ON public.remboursements
 FOR ALL
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+TO public
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
 
-CREATE INDEX idx_remboursements_pret ON public.remboursements(pret_id);
-
--- =========================
--- TRIGGER updated_at
--- =========================
+-- Trigger updated_at
 CREATE TRIGGER update_prets_updated_at
 BEFORE UPDATE ON public.prets
-FOR EACH ROW
-EXECUTE FUNCTION public.update_updated_at_column();
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
