@@ -34,7 +34,8 @@ export default function LoginPage() {
       if (ok) {
         setSession();
         toast({ title: "✅ Accès autorisé", description: "Bienvenue Eric !" });
-        window.location.href = "/dashboard"; // ⬅️ SEUL CHANGEMENT
+        await new Promise(resolve => setTimeout(resolve, 100)); // ⬅️ AJOUT
+        window.location.href = "/dashboard";
       } else {
         toast({ title: "❌ Code incorrect", description: "Veuillez réessayer.", variant: "destructive" });
         setCode("");
@@ -48,7 +49,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background décor */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-destructive" />
         <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-primary opacity-5" />
@@ -58,15 +58,12 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-sm animate-fade-in-up relative z-10">
-        {/* Clock */}
         <div className="text-center mb-4">
           <div className="font-mono text-3xl font-bold text-primary tracking-wider">{clockStr}</div>
           <div className="text-sm text-muted-foreground capitalize mt-0.5">{dateStr}</div>
         </div>
 
-        {/* Card */}
         <div className="bg-card border border-border rounded-2xl shadow-brand-lg overflow-hidden">
-          {/* Header bleu */}
           <div className="bg-primary px-8 py-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full border-2 border-white" />
@@ -85,7 +82,6 @@ export default function LoginPage() {
             <p className="text-primary-foreground/70 text-xs mt-1">Application privée • Eric Kpakpo</p>
           </div>
 
-          {/* Form */}
           <div className="px-7 py-7">
             <div className="text-center mb-5">
               <div className="inline-flex items-center gap-2 bg-primary-bg text-primary px-4 py-2 rounded-full text-sm font-semibold border border-primary/20">
