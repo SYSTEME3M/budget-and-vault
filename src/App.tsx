@@ -4,7 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
-// Pages principales
+
+// Pages Dashboard / Finance
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
@@ -18,7 +19,8 @@ import AdminPage from "@/pages/AdminPage";
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
-// Boutique - Nouvelles pages (dossier boutique/)
+
+// Boutique - Gestion & Vitrine
 import BoutiqueAccueilPage from "@/pages/boutique/AccueilPage";
 import BoutiqueProduitsPage from "@/pages/boutique/ProduitsPage";
 import BoutiqueCommandesPage from "@/pages/boutique/CommandesPage";
@@ -36,12 +38,12 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
-          {/* ── Auth ── */}
+          {/* ── AUTHENTICATION ── */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/login/admin" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* ── App principale ── */}
+          {/* ── ROUTES PROTÉGÉES (Dashboard & Finance) ── */}
           <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
           <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
           <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
@@ -55,17 +57,17 @@ const App = () => (
           <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          {/* ── Boutique Admin ── */}
+          {/* ── GESTION BOUTIQUE (Protégé) ── */}
           <Route path="/boutique" element={<AuthGuard><BoutiqueAccueilPage /></AuthGuard>} />
           <Route path="/boutique/produits" element={<AuthGuard><BoutiqueProduitsPage /></AuthGuard>} />
           <Route path="/boutique/commandes" element={<AuthGuard><BoutiqueCommandesPage /></AuthGuard>} />
           <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
 
-          {/* ── Vitrine publique (sans AuthGuard) ── */}
+          {/* ── VITRINE PUBLIQUE ── */}
           <Route path="/shop/:slug" element={<BoutiqueVitrinePage />} />
           <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
-          {/* ── 404 ── */}
+          {/* ── ERREUR 404 ── */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
