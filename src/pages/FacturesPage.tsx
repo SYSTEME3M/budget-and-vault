@@ -1,0 +1,649 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, FileDown, Trash2, ChevronDown, ChevronUp, Receipt } from "lucide-react";
+import AppLayout from "@/components/AppLayout";
+
+// ─── Types ────────────────────────────────────────────────
+type Devise = "XOF" | "USD";
+type Statut = "payee" | "en_attente" | "annulee";
+
+interface Article {
+  id?: string;
+  nom: string;
+  prix_unitaire: number;
+  quantite: number;
+  montant: number;
+  ordre: number;
+}
+
+interface Facture {
+  id: string;
+  numero: string;
+  date_facture: string;
+  vendeur_nom: string;
+  vendeur_ifu: string | null;
+  vendeur_adresse: string;
+  vendeur_contact: string;
+  vendeur_email: string | null;
+  vendeur_vmcf: string | null;
+  client_nom: string;
+  client_ifu: string | null;
+  client_adresse: string | null;
+  client_contact: string;
+  total: number;
+  devise: Devise;
+  mode_paiement: string;
+  statut: Statut;
+  note: string | null;
+  articles?: Article[];
+}
+
+// ─── Constantes ───────────────────────────────────────────
+const STATUT_LABELS: Record<Statut, string> = {
+  payee: "Payée",
+  en_attente: "En attente",
+  annulee: "Annulée",
+};
+
+const STATUT_COLORS: Record<Statut, string> = {
+  payee: "bg-green-100 text-green-800",
+  en_attente: "bg-yellow-100 text-yellow-800",
+  annulee: "bg-red-100 text-red-800",
+};
+
+function formatMontant(amount: number, devise: Devise): string {
+  if (devise === "USD") {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(amount);
+  }
+  return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
+}
+
+// ─── Génération numéro facture ────────────────────────────
+function genNumero(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const rand = Math.floor(Math.random() * 9000) + 1000;
+  return `FAC-${y}${m}-${rand}`;
+}
+
+// ─── Génération PDF ───────────────────────────────────────
+async function generateFacturePDF(facture: Facture, articles: Article[]) {
+  const jspdf = await import("jspdf");
+  const { jsPDF } = jspdf;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W = 210;
+  const margin = 15;
+  const bleu: [number, number, number] = [26, 86, 219];
+  const bleuClair: [number, number, number] = [219, 234, 254];
+  const gris: [number, number, number] = [100, 116, 139];
+  const noir: [number, number, number] = [15, 23, 42];
+  const grisLight: [number, number, number] = [241, 245, 249];
+
+  // ── En-tête
+  doc.setFillColor(...bleu);
+  doc.rect(0, 0, W, 45, "F");
+
+  // Nom vendeur (gauche)
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(facture.vendeur_nom.toUpperCase(), margin, 14);
+
+  if (facture.vendeur_ifu) {
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`IFU : ${facture.vendeur_ifu}`, margin, 21);
+  }
+
+  // FACTURE DE VENTE (droite)
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("FACTURE DE VENTE", W - margin, 14, { align: "right" });
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Facture # ${facture.numero}`, W - margin, 22, { align: "right" });
+  doc.text(`Date : ${new Date(facture.date_facture).toLocaleDateString("fr-FR")}`, W - margin, 28, { align: "right" });
+  doc.text(`Vendeur : ${facture.vendeur_nom}`, W - margin, 34, { align: "right" });
+
+  let y = 52;
+
+  // ── Bloc Vendeur + Client côte à côte
+  const colW = (W - margin * 2 - 8) / 2;
+
+  // Vendeur
+  doc.setFillColor(...grisLight);
+  doc.roundedRect(margin, y, colW, 38, 2, 2, "F");
+  doc.setTextColor(...bleu);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("VENDEUR", margin + 4, y + 7);
+  doc.setTextColor(...noir);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  const vendeurInfos = [
+    facture.vendeur_adresse,
+    `Tél : ${facture.vendeur_contact}`,
+    facture.vendeur_email ? `Email : ${facture.vendeur_email}` : "",
+    facture.vendeur_vmcf ? `VMCF : ${facture.vendeur_vmcf}` : "",
+  ].filter(Boolean);
+  vendeurInfos.forEach((line, i) => doc.text(line, margin + 4, y + 14 + i * 6));
+
+  // Client
+  const clientX = margin + colW + 8;
+  doc.setFillColor(...bleuClair);
+  doc.roundedRect(clientX, y, colW, 38, 2, 2, "F");
+  doc.setTextColor(...bleu);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("CLIENT", clientX + 4, y + 7);
+  doc.setTextColor(...noir);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  const clientInfos = [
+    `Nom : ${facture.client_nom}`,
+    facture.client_ifu ? `IFU : ${facture.client_ifu}` : "",
+    facture.client_adresse ? `Adresse : ${facture.client_adresse}` : "",
+    `Contact : ${facture.client_contact}`,
+  ].filter(Boolean);
+  clientInfos.forEach((line, i) => doc.text(line, clientX + 4, y + 14 + i * 6));
+
+  y += 46;
+
+  // ── Tableau articles
+  const colHeaders = ["#", "Nom du service / produit", "Prix unitaire", "Quantité", "Montant TTC"];
+  const colWidths = [8, 72, 28, 22, 30];
+  const colXs = colWidths.reduce((acc, w, i) => {
+    acc.push(i === 0 ? margin : acc[i - 1] + colWidths[i - 1]);
+    return acc;
+  }, [] as number[]);
+
+  // Header tableau
+  doc.setFillColor(...bleu);
+  doc.rect(margin, y, W - margin * 2, 8, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  colHeaders.forEach((h, i) => {
+    const align = i >= 2 ? "right" : "left";
+    const x = i >= 2 ? colXs[i] + colWidths[i] - 2 : colXs[i] + 2;
+    doc.text(h, x, y + 5.5, { align });
+  });
+
+  y += 8;
+
+  // Lignes articles
+  articles.forEach((art, idx) => {
+    const bg: [number, number, number] = idx % 2 === 0 ? [255, 255, 255] : grisLight;
+    doc.setFillColor(...bg);
+    doc.rect(margin, y, W - margin * 2, 8, "F");
+    doc.setTextColor(...noir);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+
+    doc.text(String(idx + 1), colXs[0] + 2, y + 5.5);
+    doc.text(art.nom, colXs[1] + 2, y + 5.5);
+    doc.text(formatMontant(art.prix_unitaire, facture.devise), colXs[2] + colWidths[2] - 2, y + 5.5, { align: "right" });
+    doc.text(String(art.quantite), colXs[3] + colWidths[3] - 2, y + 5.5, { align: "right" });
+    doc.text(formatMontant(art.montant, facture.devise), colXs[4] + colWidths[4] - 2, y + 5.5, { align: "right" });
+
+    y += 8;
+  });
+
+  // Ligne séparatrice
+  doc.setDrawColor(...bleu);
+  doc.line(margin, y, W - margin, y);
+  y += 6;
+
+  // ── Total
+  doc.setFillColor(...bleu);
+  doc.roundedRect(W - margin - 60, y, 60, 12, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(`Total : ${formatMontant(facture.total, facture.devise)}`, W - margin - 3, y + 8, { align: "right" });
+
+  y += 20;
+
+  // ── Paiement
+  doc.setFillColor(...grisLight);
+  doc.roundedRect(margin, y, W - margin * 2, 14, 2, 2, "F");
+  doc.setTextColor(...bleu);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("MODE DE PAIEMENT", margin + 4, y + 6);
+  doc.setTextColor(...noir);
+  doc.setFont("helvetica", "normal");
+  doc.text(facture.mode_paiement, margin + 4, y + 12);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatMontant(facture.total, facture.devise), W - margin - 3, y + 12, { align: "right" });
+
+  y += 22;
+
+  // ── Montant en lettres
+  doc.setTextColor(...gris);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.text(`Arrêté la présente facture à la somme de ${formatMontant(facture.total, facture.devise)} TTC`, margin, y);
+
+  if (facture.note) {
+    y += 8;
+    doc.setTextColor(...noir);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Note : ${facture.note}`, margin, y);
+  }
+
+  // ── Pied de page
+  doc.setFillColor(...bleu);
+  doc.rect(0, 282, W, 15, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  doc.text(`Document généré le ${today} — Application MES SECRETS — Confidentiel`, W / 2, 291, { align: "center" });
+
+  doc.save(`facture_${facture.numero}_${facture.client_nom.replace(/\s/g, "_")}.pdf`);
+}
+
+// ─── Composant principal ──────────────────────────────────
+export default function FacturesPage() {
+  const { toast } = useToast();
+  const [factures, setFactures] = useState<Facture[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const emptyArticle = (): Article => ({ nom: "", prix_unitaire: 0, quantite: 1, montant: 0, ordre: 0 });
+
+  const [form, setForm] = useState({
+    numero: genNumero(),
+    date_facture: new Date().toISOString().split("T")[0],
+    vendeur_nom: "",
+    vendeur_ifu: "",
+    vendeur_adresse: "",
+    vendeur_contact: "",
+    vendeur_email: "",
+    vendeur_vmcf: "",
+    client_nom: "",
+    client_ifu: "",
+    client_adresse: "",
+    client_contact: "",
+    mode_paiement: "ESPECES",
+    devise: "XOF" as Devise,
+    statut: "payee" as Statut,
+    note: "",
+  });
+
+  const [articles, setArticles] = useState<Article[]>([emptyArticle()]);
+
+  const total = articles.reduce((sum, a) => sum + a.montant, 0);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("factures" as any).select("*, articles_facture(*)").order("created_at", { ascending: false });
+    if (data) {
+      setFactures((data as any[]).map(f => ({ ...f, articles: f.articles_facture || [] })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const updateArticle = (idx: number, field: keyof Article, value: string | number) => {
+    setArticles(prev => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], [field]: value };
+      const pu = field === "prix_unitaire" ? Number(value) : Number(updated[idx].prix_unitaire);
+      const qt = field === "quantite" ? Number(value) : Number(updated[idx].quantite);
+      updated[idx].montant = pu * qt;
+      return updated;
+    });
+  };
+
+  const addArticle = () => setArticles(prev => [...prev, emptyArticle()]);
+  const removeArticle = (idx: number) => setArticles(prev => prev.filter((_, i) => i !== idx));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.vendeur_nom || !form.vendeur_adresse || !form.vendeur_contact) {
+      toast({ title: "Champs vendeur requis", variant: "destructive" });
+      return;
+    }
+    if (!form.client_nom || !form.client_contact) {
+      toast({ title: "Champs client requis", variant: "destructive" });
+      return;
+    }
+    if (articles.some(a => !a.nom || a.prix_unitaire <= 0)) {
+      toast({ title: "Vérifiez les articles", description: "Nom et prix requis pour chaque article.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    const { data: newFacture, error } = await supabase.from("factures" as any).insert({
+      numero: form.numero,
+      date_facture: form.date_facture,
+      vendeur_nom: form.vendeur_nom,
+      vendeur_ifu: form.vendeur_ifu || null,
+      vendeur_adresse: form.vendeur_adresse,
+      vendeur_contact: form.vendeur_contact,
+      vendeur_email: form.vendeur_email || null,
+      vendeur_vmcf: form.vendeur_vmcf || null,
+      client_nom: form.client_nom,
+      client_ifu: form.client_ifu || null,
+      client_adresse: form.client_adresse || null,
+      client_contact: form.client_contact,
+      total,
+      devise: form.devise,
+      mode_paiement: form.mode_paiement,
+      statut: form.statut,
+      note: form.note || null,
+    }).select().single();
+
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+
+    // Insérer les articles
+    const articlesData = articles.map((a, i) => ({
+      facture_id: (newFacture as any).id,
+      nom: a.nom,
+      prix_unitaire: a.prix_unitaire,
+      quantite: a.quantite,
+      montant: a.montant,
+      ordre: i,
+    }));
+    await supabase.from("articles_facture" as any).insert(articlesData);
+
+    toast({ title: "✅ Facture créée !", description: `Facture ${form.numero} enregistrée.` });
+    setShowForm(false);
+    setForm({ ...form, numero: genNumero(), client_nom: "", client_ifu: "", client_adresse: "", client_contact: "", note: "" });
+    setArticles([emptyArticle()]);
+    setSaving(false);
+    load();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cette facture ?")) return;
+    await supabase.from("factures" as any).delete().eq("id", id);
+    toast({ title: "Supprimée" });
+    load();
+  };
+
+  return (
+    <AppLayout>
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-foreground">Factures</h1>
+            <p className="text-sm text-muted-foreground">Créez et gérez vos factures</p>
+          </div>
+          <Button onClick={() => setShowForm(!showForm)} className="bg-primary text-white gap-1">
+            <Plus className="w-4 h-4" /> Nouvelle facture
+          </Button>
+        </div>
+
+        {/* Formulaire */}
+        {showForm && (
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-6">
+            <h2 className="font-bold text-lg">➕ Nouvelle facture</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+
+              {/* Infos générales */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">N° Facture</label>
+                  <Input value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Date *</label>
+                  <Input type="date" value={form.date_facture} onChange={e => setForm({ ...form, date_facture: e.target.value })} className="mt-1" />
+                </div>
+              </div>
+
+              {/* Section Vendeur */}
+              <div className="space-y-3 border border-primary/20 rounded-xl p-4 bg-primary/5">
+                <p className="font-semibold text-primary text-sm">Informations Vendeur</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium">Nom du vendeur *</label>
+                    <Input value={form.vendeur_nom} onChange={e => setForm({ ...form, vendeur_nom: e.target.value })} placeholder="Nom ou société" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">IFU (optionnel)</label>
+                    <Input value={form.vendeur_ifu} onChange={e => setForm({ ...form, vendeur_ifu: e.target.value })} placeholder="Numéro IFU" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Contact *</label>
+                    <Input value={form.vendeur_contact} onChange={e => setForm({ ...form, vendeur_contact: e.target.value })} placeholder="Téléphone" className="mt-1" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium">Adresse *</label>
+                    <Input value={form.vendeur_adresse} onChange={e => setForm({ ...form, vendeur_adresse: e.target.value })} placeholder="Adresse complète" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Email (optionnel)</label>
+                    <Input type="email" value={form.vendeur_email} onChange={e => setForm({ ...form, vendeur_email: e.target.value })} placeholder="email@exemple.com" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">VMCF (optionnel)</label>
+                    <Input value={form.vendeur_vmcf} onChange={e => setForm({ ...form, vendeur_vmcf: e.target.value })} placeholder="Code VMCF" className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Client */}
+              <div className="space-y-3 border border-orange-200 rounded-xl p-4 bg-orange-50/50">
+                <p className="font-semibold text-orange-600 text-sm">Informations Client</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium">Nom du client *</label>
+                    <Input value={form.client_nom} onChange={e => setForm({ ...form, client_nom: e.target.value })} placeholder="Nom du client" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">IFU (optionnel)</label>
+                    <Input value={form.client_ifu} onChange={e => setForm({ ...form, client_ifu: e.target.value })} placeholder="Numéro IFU" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Contact *</label>
+                    <Input value={form.client_contact} onChange={e => setForm({ ...form, client_contact: e.target.value })} placeholder="Téléphone" className="mt-1" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium">Adresse (optionnel)</label>
+                    <Input value={form.client_adresse} onChange={e => setForm({ ...form, client_adresse: e.target.value })} placeholder="Adresse client" className="mt-1" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Articles */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm">Articles / Services</p>
+                  <Button type="button" size="sm" variant="outline" onClick={addArticle} className="gap-1">
+                    <Plus className="w-3 h-3" /> Ajouter
+                  </Button>
+                </div>
+
+                {/* Header */}
+                <div className="grid grid-cols-12 gap-1 text-xs font-semibold text-muted-foreground px-1">
+                  <div className="col-span-5">Nom</div>
+                  <div className="col-span-3">Prix unitaire</div>
+                  <div className="col-span-2">Qté</div>
+                  <div className="col-span-2 text-right">Montant</div>
+                </div>
+
+                {articles.map((art, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-1 items-center">
+                    <div className="col-span-5">
+                      <Input value={art.nom} onChange={e => updateArticle(idx, "nom", e.target.value)}
+                        placeholder="Description..." className="h-9 text-sm" />
+                    </div>
+                    <div className="col-span-3">
+                      <Input type="number" value={art.prix_unitaire || ""}
+                        onChange={e => updateArticle(idx, "prix_unitaire", parseFloat(e.target.value) || 0)}
+                        placeholder="0" className="h-9 text-sm" />
+                    </div>
+                    <div className="col-span-2">
+                      <Input type="number" value={art.quantite || ""}
+                        onChange={e => updateArticle(idx, "quantite", parseFloat(e.target.value) || 1)}
+                        placeholder="1" className="h-9 text-sm" />
+                    </div>
+                    <div className="col-span-1 text-right text-sm font-medium text-primary">
+                      {Math.round(art.montant).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")}
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      {articles.length > 1 && (
+                        <button type="button" onClick={() => removeArticle(idx)}
+                          className="w-7 h-7 rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors flex items-center justify-center">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Total */}
+                <div className="flex justify-end">
+                  <div className="bg-primary text-white rounded-xl px-5 py-2 font-bold text-base">
+                    Total : {Math.round(total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} {form.devise === "XOF" ? "FCFA" : "USD"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Paiement */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Mode de paiement *</label>
+                  <select value={form.mode_paiement} onChange={e => setForm({ ...form, mode_paiement: e.target.value })}
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
+                    <option>ESPECES</option>
+                    <option>MOBILE MONEY</option>
+                    <option>VIREMENT</option>
+                    <option>CHEQUE</option>
+                    <option>CARTE</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Devise</label>
+                  <select value={form.devise} onChange={e => setForm({ ...form, devise: e.target.value as Devise })}
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
+                    <option value="XOF">FCFA (XOF)</option>
+                    <option value="USD">Dollar (USD)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Statut</label>
+                  <select value={form.statut} onChange={e => setForm({ ...form, statut: e.target.value as Statut })}
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
+                    <option value="payee">Payée</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="annulee">Annulée</option>
+                  </select>
+                </div>
+                <div className="col-span-3">
+                  <label className="text-sm font-medium">Note (optionnel)</label>
+                  <Input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
+                    placeholder="Note ou remarque..." className="mt-1" />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
+                <Button type="submit" disabled={saving} className="bg-primary text-white">
+                  {saving ? "Enregistrement..." : "Enregistrer la facture"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Liste */}
+        {loading ? (
+          <div className="text-center py-10 text-muted-foreground">Chargement...</div>
+        ) : factures.length === 0 ? (
+          <div className="text-center py-14 bg-card border border-border rounded-2xl">
+            <Receipt className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Aucune facture créée</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {factures.map(facture => {
+              const isExpanded = expandedId === facture.id;
+              return (
+                <div key={facture.id} className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-primary">{facture.numero}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUT_COLORS[facture.statut]}`}>
+                            {STATUT_LABELS[facture.statut]}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          <span className="text-sm font-semibold">{facture.client_nom}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(facture.date_facture).toLocaleDateString("fr-FR")}</span>
+                        </div>
+                        <div className="text-lg font-black text-primary mt-1">
+                          {formatMontant(facture.total, facture.devise)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => generateFacturePDF(facture, facture.articles || [])}
+                          className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors" title="Télécharger PDF">
+                          <FileDown className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setExpandedId(isExpanded ? null : facture.id)}
+                          className="p-2 rounded-lg hover:bg-muted transition-colors">
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                        <button onClick={() => handleDelete(facture.id)}
+                          className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="border-t border-border bg-muted/30 p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-muted-foreground">Vendeur :</span> <span className="font-medium">{facture.vendeur_nom}</span></div>
+                        <div><span className="text-muted-foreground">Mode :</span> <span className="font-medium">{facture.mode_paiement}</span></div>
+                        <div><span className="text-muted-foreground">Contact client :</span> <span className="font-medium">{facture.client_contact}</span></div>
+                        {facture.client_adresse && <div><span className="text-muted-foreground">Adresse :</span> <span className="font-medium">{facture.client_adresse}</span></div>}
+                      </div>
+
+                      {facture.articles && facture.articles.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Articles</p>
+                          <div className="space-y-1">
+                            {facture.articles.map((art, i) => (
+                              <div key={i} className="flex justify-between text-sm bg-white border border-border rounded-lg px-3 py-2">
+                                <span>{art.nom}</span>
+                                <span className="text-muted-foreground">{art.quantite} × {formatMontant(art.prix_unitaire, facture.devise)}</span>
+                                <span className="font-semibold text-primary">{formatMontant(art.montant, facture.devise)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {facture.note && <p className="text-xs text-muted-foreground italic">Note: {facture.note}</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  );
+}
