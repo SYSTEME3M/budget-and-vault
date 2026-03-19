@@ -17,8 +17,8 @@ import AdminPage from "@/pages/AdminPage";
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
-import NotFound from "@/pages/NotFound";
 import BoutiqueParametresPage from "@/pages/BoutiqueParametresPage";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -29,9 +29,12 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          {/* Auth */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/login/admin" element={<LoginPage />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* App principale */}
           <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
           <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
           <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
@@ -44,7 +47,12 @@ const App = () => (
           <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
           <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
+
+          {/* Boutique - Espace Admin */}
+          <Route path="/boutique" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
           <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
+
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
