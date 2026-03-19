@@ -21,7 +21,7 @@ import FacturesPage from "@/pages/FacturesPage";
 // Boutique - Nouvelles pages (dossier boutique/)
 import BoutiqueAccueilPage from "@/pages/boutique/AccueilPage";
 import BoutiqueProduitsPage from "@/pages/boutique/ProduitsPage";
-import ProduitsDigitauxPage from "@/pages/boutique/ProduitsDigitauxPage";
+import ProduitsDigitauxPage from "@/pages/boutique/ProduitsDigitaux";
 import BoutiqueCommandesPage from "@/pages/boutique/CommandesPage";
 import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
 import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
@@ -56,7 +56,7 @@ const App = () => (
           <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          {/* ── Boutique Admin (nouvelles pages) ── */}
+          {/* ── Boutique Admin ── */}
           <Route path="/boutique" element={<AuthGuard><BoutiqueAccueilPage /></AuthGuard>} />
           <Route path="/boutique/produits" element={<AuthGuard><BoutiqueProduitsPage /></AuthGuard>} />
           <Route path="/boutique/produits-digitaux" element={<AuthGuard><ProduitsDigitauxPage /></AuthGuard>} />
