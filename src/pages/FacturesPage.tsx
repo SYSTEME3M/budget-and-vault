@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ const INDICATIFS: Record<string, string> = {
   "États-Unis": "+1", "Canada": "+1", "Autre": ""
 };
 
-function formatMontant(amount: number, devise: Devise): string {
+function fmt(amount: number, devise: Devise): string {
   if (devise === "USD") {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(amount);
   }
@@ -83,11 +83,10 @@ function genNumero(): string {
   return `FAC-${y}${m}-${rand}`;
 }
 
-function getNow() {
-  const now = new Date();
-  const date = now.toISOString().split("T")[0];
-  const heure = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  return { date, heure };
+function getHeureNow(): string {
+  return new Date().toLocaleTimeString("fr-FR", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit"
+  });
 }
 
 async function generateFacturePDF(facture: Facture, articles: Article[]) {
@@ -101,7 +100,6 @@ async function generateFacturePDF(facture: Facture, articles: Article[]) {
   const gris: [number, number, number] = [100, 116, 139];
   const noir: [number, number, number] = [15, 23, 42];
   const grisLight: [number, number, number] = [241, 245, 249];
-
   const factureUrl = `https://budget-and-vault.vercel.app/factures?id=${facture.id}`;
 
   // En-tête
@@ -112,15 +110,12 @@ async function generateFacturePDF(facture: Facture, articles: Article[]) {
   doc.setFontSize(16);
   doc.text(facture.vendeur_nom.toUpperCase(), margin, 14);
   if (facture.vendeur_ifu) {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9); doc.setFont("helvetica", "normal");
     doc.text(`IFU : ${facture.vendeur_ifu}`, margin, 21);
   }
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(18);
   doc.text("FACTURE DE VENTE", W - margin, 14, { align: "right" });
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9); doc.setFont("helvetica", "normal");
   doc.text(`Facture # ${facture.numero}`, W - margin, 22, { align: "right" });
   doc.text(`Date : ${new Date(facture.date_facture).toLocaleDateString("fr-FR")}`, W - margin, 28, { align: "right" });
   doc.text(`Heure : ${facture.heure_facture}`, W - margin, 34, { align: "right" });
@@ -131,147 +126,102 @@ async function generateFacturePDF(facture: Facture, articles: Article[]) {
   // Vendeur + Client
   const colW = (W - margin * 2 - 8) / 2;
   doc.setFillColor(...grisLight);
-  doc.roundedRect(margin, y, colW, 42, 2, 2, "F");
-  doc.setTextColor(...bleu);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.roundedRect(margin, y, colW, 44, 2, 2, "F");
+  doc.setTextColor(...bleu); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
   doc.text("VENDEUR", margin + 4, y + 7);
-  doc.setTextColor(...noir);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  [
-    facture.vendeur_adresse,
-    `Pays : ${facture.vendeur_pays}`,
-    `Tél : ${INDICATIFS[facture.vendeur_pays] || ""} ${facture.vendeur_contact}`,
-    facture.vendeur_email ? `Email : ${facture.vendeur_email}` : "",
-  ].filter(Boolean).forEach((line, i) => doc.text(line, margin + 4, y + 14 + i * 6));
+  doc.setTextColor(...noir); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+  [facture.vendeur_adresse, `Pays : ${facture.vendeur_pays}`,
+   `Tél : ${INDICATIFS[facture.vendeur_pays] || ""} ${facture.vendeur_contact}`,
+   `Email : ${facture.vendeur_email}`]
+    .filter(Boolean).forEach((l, i) => doc.text(l, margin + 4, y + 14 + i * 6));
 
-  const clientX = margin + colW + 8;
+  const cx = margin + colW + 8;
   doc.setFillColor(...bleuClair);
-  doc.roundedRect(clientX, y, colW, 42, 2, 2, "F");
-  doc.setTextColor(...bleu);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("CLIENT", clientX + 4, y + 7);
-  doc.setTextColor(...noir);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  [
-    `Nom : ${facture.client_nom}`,
-    facture.client_ifu ? `IFU : ${facture.client_ifu}` : "",
-    `Pays : ${facture.client_pays}`,
-    facture.client_adresse ? `Adresse : ${facture.client_adresse}` : "",
-    `Tél : ${INDICATIFS[facture.client_pays] || ""} ${facture.client_contact}`,
-  ].filter(Boolean).forEach((line, i) => doc.text(line, clientX + 4, y + 14 + i * 6));
+  doc.roundedRect(cx, y, colW, 44, 2, 2, "F");
+  doc.setTextColor(...bleu); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+  doc.text("CLIENT", cx + 4, y + 7);
+  doc.setTextColor(...noir); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+  [`Nom : ${facture.client_nom}`,
+   facture.client_ifu ? `IFU : ${facture.client_ifu}` : "",
+   `Pays : ${facture.client_pays}`,
+   facture.client_adresse ? `Adresse : ${facture.client_adresse}` : "",
+   `Tél : ${INDICATIFS[facture.client_pays] || ""} ${facture.client_contact}`]
+    .filter(Boolean).forEach((l, i) => doc.text(l, cx + 4, y + 14 + i * 6));
 
-  y += 50;
+  y += 52;
 
-  // Tableau articles
-  const colWidths = [8, 74, 28, 18, 32];
-  const colXs: number[] = [];
-  let cx = margin;
-  colWidths.forEach(w => { colXs.push(cx); cx += w; });
+  // Tableau
+  const cw = [8, 74, 28, 18, 32];
+  const cxs: number[] = [];
+  let ox = margin;
+  cw.forEach(w => { cxs.push(ox); ox += w; });
 
-  doc.setFillColor(...bleu);
-  doc.rect(margin, y, W - margin * 2, 8, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
+  doc.setFillColor(...bleu); doc.rect(margin, y, W - margin * 2, 8, "F");
+  doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
   ["#", "Nom du service / produit", "Prix unitaire", "Qté", "Montant TTC"].forEach((h, i) => {
     const align = i >= 2 ? "right" : "left";
-    const x = i >= 2 ? colXs[i] + colWidths[i] - 2 : colXs[i] + 2;
-    doc.text(h, x, y + 5.5, { align });
+    doc.text(h, i >= 2 ? cxs[i] + cw[i] - 2 : cxs[i] + 2, y + 5.5, { align });
   });
   y += 8;
 
   articles.forEach((art, idx) => {
     const bg: [number, number, number] = idx % 2 === 0 ? [255, 255, 255] : grisLight;
-    doc.setFillColor(...bg);
-    doc.rect(margin, y, W - margin * 2, 8, "F");
-    doc.setTextColor(...noir);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.text(String(idx + 1), colXs[0] + 2, y + 5.5);
-    doc.text(art.nom, colXs[1] + 2, y + 5.5);
-    doc.text(formatMontant(art.prix_unitaire, facture.devise), colXs[2] + colWidths[2] - 2, y + 5.5, { align: "right" });
-    doc.text(String(art.quantite), colXs[3] + colWidths[3] - 2, y + 5.5, { align: "right" });
-    doc.text(formatMontant(art.montant, facture.devise), colXs[4] + colWidths[4] - 2, y + 5.5, { align: "right" });
+    doc.setFillColor(...bg); doc.rect(margin, y, W - margin * 2, 8, "F");
+    doc.setTextColor(...noir); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+    doc.text(String(idx + 1), cxs[0] + 2, y + 5.5);
+    doc.text(art.nom, cxs[1] + 2, y + 5.5);
+    doc.text(fmt(art.prix_unitaire, facture.devise), cxs[2] + cw[2] - 2, y + 5.5, { align: "right" });
+    doc.text(String(art.quantite), cxs[3] + cw[3] - 2, y + 5.5, { align: "right" });
+    doc.text(fmt(art.montant, facture.devise), cxs[4] + cw[4] - 2, y + 5.5, { align: "right" });
     y += 8;
   });
 
-  doc.setDrawColor(...bleu);
-  doc.line(margin, y, W - margin, y);
-  y += 6;
+  doc.setDrawColor(...bleu); doc.line(margin, y, W - margin, y); y += 6;
 
   // Total
-  doc.setFillColor(...bleu);
-  doc.roundedRect(W - margin - 65, y, 65, 12, 2, 2, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text(`Total : ${formatMontant(facture.total, facture.devise)}`, W - margin - 3, y + 8, { align: "right" });
+  doc.setFillColor(...bleu); doc.roundedRect(W - margin - 65, y, 65, 12, 2, 2, "F");
+  doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+  doc.text(`Total : ${fmt(facture.total, facture.devise)}`, W - margin - 3, y + 8, { align: "right" });
   y += 20;
 
   // Paiement
-  doc.setFillColor(...grisLight);
-  doc.roundedRect(margin, y, W - margin * 2, 14, 2, 2, "F");
-  doc.setTextColor(...bleu);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFillColor(...grisLight); doc.roundedRect(margin, y, W - margin * 2, 14, 2, 2, "F");
+  doc.setTextColor(...bleu); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
   doc.text("MODE DE PAIEMENT", margin + 4, y + 6);
-  doc.setTextColor(...noir);
-  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...noir); doc.setFont("helvetica", "normal");
   doc.text(facture.mode_paiement, margin + 4, y + 12);
   doc.setFont("helvetica", "bold");
-  doc.text(formatMontant(facture.total, facture.devise), W - margin - 3, y + 12, { align: "right" });
+  doc.text(fmt(facture.total, facture.devise), W - margin - 3, y + 12, { align: "right" });
   y += 20;
 
-  doc.setTextColor(...gris);
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(8);
-  doc.text(`Arrêté la présente facture à la somme de ${formatMontant(facture.total, facture.devise)} TTC`, margin, y);
-
-  if (facture.note) {
-    y += 8;
-    doc.setTextColor(...noir);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Note : ${facture.note}`, margin, y);
-  }
-
+  doc.setTextColor(...gris); doc.setFont("helvetica", "italic"); doc.setFontSize(8);
+  doc.text(`Arrêté la présente facture à la somme de ${fmt(facture.total, facture.devise)} TTC`, margin, y);
+  if (facture.note) { y += 8; doc.setTextColor(...noir); doc.setFont("helvetica", "normal"); doc.text(`Note : ${facture.note}`, margin, y); }
   y += 12;
 
   // QR Code
   try {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(factureUrl)}`;
-    const response = await fetch(qrUrl);
-    const blob = await response.blob();
-    const reader = new FileReader();
-    await new Promise<void>((resolve) => {
-      reader.onload = () => {
-        try { doc.addImage(reader.result as string, "PNG", margin, y, 25, 25); } catch {}
-        resolve();
-      };
+    const qrResponse = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(factureUrl)}`);
+    const blob = await qrResponse.blob();
+    await new Promise<void>(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => { try { doc.addImage(reader.result as string, "PNG", margin, y, 25, 25); } catch {} resolve(); };
       reader.readAsDataURL(blob);
     });
-    doc.setTextColor(...gris);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...gris); doc.setFontSize(7); doc.setFont("helvetica", "normal");
     doc.text("Scanner pour voir la facture en ligne", margin + 28, y + 8);
     doc.text(factureUrl, margin + 28, y + 14);
   } catch {}
 
   // Pied de page
-  doc.setFillColor(...bleu);
-  doc.rect(0, 282, W, 15, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-  doc.text(`Document généré le ${today} — Application MES SECRETS — Confidentiel`, W / 2, 291, { align: "center" });
+  doc.setFillColor(...bleu); doc.rect(0, 282, W, 15, "F");
+  doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont("helvetica", "normal");
+  doc.text(`Document généré le ${new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })} — Application MES SECRETS — Confidentiel`, W / 2, 291, { align: "center" });
 
   doc.save(`facture_${facture.numero}_${facture.client_nom.replace(/\s/g, "_")}.pdf`);
 }
 
+// ─── Composant ────────────────────────────────────────────
 export default function FacturesPage() {
   const { toast } = useToast();
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -280,15 +230,15 @@ export default function FacturesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showHistorique, setShowHistorique] = useState(false);
-  const [now, setNow] = useState(getNow());
+  const [heure, setHeure] = useState(getHeureNow());
 
-  // ✅ Horloge en temps réel
+  // ✅ Horloge temps réel
   useEffect(() => {
-    const timer = setInterval(() => setNow(getNow()), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setHeure(getHeureNow()), 1000);
+    return () => clearInterval(t);
   }, []);
 
-  const emptyArticle = (): Article => ({ nom: "", prix_unitaire: 0, quantite: 1, montant: 0, ordre: 0 });
+  const emptyArt = (): Article => ({ nom: "", prix_unitaire: 0, quantite: 1, montant: 0, ordre: 0 });
 
   const [form, setForm] = useState({
     vendeur_nom: "", vendeur_ifu: "", vendeur_adresse: "",
@@ -299,84 +249,89 @@ export default function FacturesPage() {
     statut: "payee" as Statut, note: "",
   });
 
-  const [articles, setArticles] = useState<Article[]>([emptyArticle()]);
+  const [articles, setArticles] = useState<Article[]>([emptyArt()]);
 
-  // ✅ Total calculé automatiquement
-  const total = articles.reduce((sum, a) => sum + (Number(a.prix_unitaire) * Number(a.quantite)), 0);
+  // ✅ Total automatique recalculé à chaque changement
+  const total = articles.reduce((sum, a) => {
+    const pu = parseFloat(String(a.prix_unitaire)) || 0;
+    const qt = parseFloat(String(a.quantite)) || 0;
+    return sum + pu * qt;
+  }, 0);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("factures" as any)
-      .select("*, articles_facture(*)")
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.from("factures" as any).select("*, articles_facture(*)").order("created_at", { ascending: false });
     if (data) setFactures((data as any[]).map(f => ({ ...f, articles: f.articles_facture || [] })));
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const updateArticle = (idx: number, field: keyof Article, value: string | number) => {
+  // ✅ updateArticle corrigé
+  const updateArticle = (idx: number, field: string, value: string) => {
     setArticles(prev => {
-      const updated = [...prev];
-      const art = { ...updated[idx] };
-      if (field === "nom") {
-        art.nom = value as string;
-      } else {
-        (art as any)[field] = Number(value) || 0;
-      }
-      art.montant = Number(art.prix_unitaire) * Number(art.quantite);
-      updated[idx] = art;
-      return [...updated];
+      const next = prev.map((a, i) => {
+        if (i !== idx) return a;
+        const updated = { ...a };
+        if (field === "nom") {
+          updated.nom = value;
+        } else if (field === "prix_unitaire") {
+          updated.prix_unitaire = parseFloat(value) || 0;
+        } else if (field === "quantite") {
+          updated.quantite = parseFloat(value) || 0;
+        }
+        updated.montant = (parseFloat(String(updated.prix_unitaire)) || 0) * (parseFloat(String(updated.quantite)) || 0);
+        return updated;
+      });
+      return next;
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Vérifications vendeur
     if (!form.vendeur_nom || !form.vendeur_adresse || !form.vendeur_contact || !form.vendeur_pays || !form.vendeur_email) {
       toast({ title: "Tous les champs vendeur sont obligatoires", variant: "destructive" }); return;
     }
     if (!form.client_nom || !form.client_contact || !form.client_pays) {
       toast({ title: "Nom, pays et contact client sont obligatoires", variant: "destructive" }); return;
     }
-    if (articles.some(a => !a.nom || Number(a.prix_unitaire) <= 0)) {
+    if (articles.some(a => !a.nom || (parseFloat(String(a.prix_unitaire)) || 0) <= 0)) {
       toast({ title: "Vérifiez les articles", variant: "destructive" }); return;
     }
 
     setSaving(true);
     const numero = genNumero();
-    const { date, heure } = getNow();
+    const heureNow = getHeureNow();
+    const dateNow = new Date().toISOString().split("T")[0];
 
-    const { data: newFacture, error } = await supabase.from("factures" as any).insert({
-      numero, date_facture: date, heure_facture: heure,
+    const { data: newF, error } = await supabase.from("factures" as any).insert({
+      numero, date_facture: dateNow, heure_facture: heureNow,
       vendeur_nom: form.vendeur_nom, vendeur_ifu: form.vendeur_ifu || null,
       vendeur_adresse: form.vendeur_adresse, vendeur_pays: form.vendeur_pays,
       vendeur_contact: form.vendeur_contact, vendeur_email: form.vendeur_email,
       client_nom: form.client_nom, client_ifu: form.client_ifu || null,
       client_adresse: form.client_adresse || null, client_pays: form.client_pays,
-      client_contact: form.client_contact,
-      total, devise: form.devise, mode_paiement: form.mode_paiement,
+      client_contact: form.client_contact, total,
+      devise: form.devise, mode_paiement: form.mode_paiement,
       statut: form.statut, note: form.note || null,
     }).select().single();
 
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-      setSaving(false); return;
-    }
+    if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); setSaving(false); return; }
 
     await supabase.from("articles_facture" as any).insert(
       articles.map((a, i) => ({
-        facture_id: (newFacture as any).id, nom: a.nom,
-        prix_unitaire: Number(a.prix_unitaire), quantite: Number(a.quantite),
-        montant: Number(a.prix_unitaire) * Number(a.quantite), ordre: i,
+        facture_id: (newF as any).id, nom: a.nom,
+        prix_unitaire: parseFloat(String(a.prix_unitaire)) || 0,
+        quantite: parseFloat(String(a.quantite)) || 0,
+        montant: (parseFloat(String(a.prix_unitaire)) || 0) * (parseFloat(String(a.quantite)) || 0),
+        ordre: i,
       }))
     );
 
     toast({ title: "✅ Facture créée !", description: `Facture ${numero} enregistrée.` });
     setShowForm(false);
     setForm({ vendeur_nom: "", vendeur_ifu: "", vendeur_adresse: "", vendeur_pays: "", vendeur_contact: "", vendeur_email: "", client_nom: "", client_ifu: "", client_adresse: "", client_pays: "", client_contact: "", mode_paiement: "ESPECES", devise: "XOF", statut: "payee", note: "" });
-    setArticles([emptyArticle()]);
+    setArticles([emptyArt()]);
     setSaving(false);
     load();
   };
@@ -384,15 +339,13 @@ export default function FacturesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer cette facture ?")) return;
     await supabase.from("factures" as any).delete().eq("id", id);
-    toast({ title: "Supprimée" });
-    load();
+    toast({ title: "Supprimée" }); load();
   };
 
-  // Grouper par date pour historique
   const facturesParDate = factures.reduce((acc, f) => {
-    const date = new Date(f.date_facture).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(f);
+    const d = new Date(f.date_facture).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(f);
     return acc;
   }, {} as Record<string, Facture[]>);
 
@@ -406,7 +359,7 @@ export default function FacturesPage() {
             <p className="text-sm text-muted-foreground">Créez et gérez vos factures</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowHistorique(!showHistorique)} className="gap-1">
+            <Button variant="outline" onClick={() => { setShowHistorique(!showHistorique); setShowForm(false); }} className="gap-1">
               <History className="w-4 h-4" />
               {showHistorique ? "Liste" : "Historique"}
             </Button>
@@ -421,9 +374,9 @@ export default function FacturesPage() {
           <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-lg">➕ Nouvelle facture</h2>
-              <div className="text-right text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
-                <div className="font-mono font-bold text-primary">{now.heure}</div>
-                <div>{new Date().toLocaleDateString("fr-FR")}</div>
+              <div className="text-right bg-muted rounded-xl px-3 py-2">
+                <div className="font-mono font-bold text-primary text-sm">{heure}</div>
+                <div className="text-xs text-muted-foreground">{new Date().toLocaleDateString("fr-FR")}</div>
               </div>
             </div>
 
@@ -433,23 +386,20 @@ export default function FacturesPage() {
                 <p className="font-semibold text-primary text-sm">Informations Vendeur (tous obligatoires)</p>
                 <div>
                   <label className="text-sm font-medium">Nom du vendeur *</label>
-                  <Input value={form.vendeur_nom} onChange={e => setForm({ ...form, vendeur_nom: e.target.value })}
-                    placeholder="Nom ou société" className="mt-1" required />
+                  <Input value={form.vendeur_nom} onChange={e => setForm({ ...form, vendeur_nom: e.target.value })} placeholder="Nom ou société" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">IFU (optionnel)</label>
-                  <Input value={form.vendeur_ifu} onChange={e => setForm({ ...form, vendeur_ifu: e.target.value })}
-                    placeholder="Numéro IFU" className="mt-1" />
+                  <Input value={form.vendeur_ifu} onChange={e => setForm({ ...form, vendeur_ifu: e.target.value })} placeholder="Numéro IFU" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Adresse *</label>
-                  <Input value={form.vendeur_adresse} onChange={e => setForm({ ...form, vendeur_adresse: e.target.value })}
-                    placeholder="Adresse complète" className="mt-1" required />
+                  <Input value={form.vendeur_adresse} onChange={e => setForm({ ...form, vendeur_adresse: e.target.value })} placeholder="Adresse complète" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Pays *</label>
                   <select value={form.vendeur_pays} onChange={e => setForm({ ...form, vendeur_pays: e.target.value })}
-                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm" required>
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
                     <option value="">-- Choisir le pays --</option>
                     {PAYS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -457,17 +407,15 @@ export default function FacturesPage() {
                 <div>
                   <label className="text-sm font-medium">Contact *</label>
                   <div className="flex gap-2 mt-1">
-                    <div className="h-10 px-3 flex items-center rounded-md border border-input bg-muted text-sm font-mono min-w-16">
+                    <div className="h-10 px-3 flex items-center rounded-md border border-input bg-muted text-sm font-mono min-w-16 text-center">
                       {form.vendeur_pays ? INDICATIFS[form.vendeur_pays] : "🌍"}
                     </div>
-                    <Input value={form.vendeur_contact} onChange={e => setForm({ ...form, vendeur_contact: e.target.value })}
-                      placeholder="Numéro de téléphone" required />
+                    <Input value={form.vendeur_contact} onChange={e => setForm({ ...form, vendeur_contact: e.target.value })} placeholder="Numéro de téléphone" />
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">Email *</label>
-                  <Input type="email" value={form.vendeur_email} onChange={e => setForm({ ...form, vendeur_email: e.target.value })}
-                    placeholder="email@exemple.com" className="mt-1" required />
+                  <Input type="email" value={form.vendeur_email} onChange={e => setForm({ ...form, vendeur_email: e.target.value })} placeholder="email@exemple.com" className="mt-1" />
                 </div>
               </div>
 
@@ -476,18 +424,16 @@ export default function FacturesPage() {
                 <p className="font-semibold text-orange-600 text-sm">Informations Client</p>
                 <div>
                   <label className="text-sm font-medium">Nom du client *</label>
-                  <Input value={form.client_nom} onChange={e => setForm({ ...form, client_nom: e.target.value })}
-                    placeholder="Nom du client" className="mt-1" required />
+                  <Input value={form.client_nom} onChange={e => setForm({ ...form, client_nom: e.target.value })} placeholder="Nom du client" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">IFU (optionnel)</label>
-                  <Input value={form.client_ifu} onChange={e => setForm({ ...form, client_ifu: e.target.value })}
-                    placeholder="Numéro IFU" className="mt-1" />
+                  <Input value={form.client_ifu} onChange={e => setForm({ ...form, client_ifu: e.target.value })} placeholder="Numéro IFU" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Pays *</label>
                   <select value={form.client_pays} onChange={e => setForm({ ...form, client_pays: e.target.value })}
-                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm" required>
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
                     <option value="">-- Choisir le pays --</option>
                     {PAYS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -495,17 +441,15 @@ export default function FacturesPage() {
                 <div>
                   <label className="text-sm font-medium">Contact *</label>
                   <div className="flex gap-2 mt-1">
-                    <div className="h-10 px-3 flex items-center rounded-md border border-input bg-muted text-sm font-mono min-w-16">
+                    <div className="h-10 px-3 flex items-center rounded-md border border-input bg-muted text-sm font-mono min-w-16 text-center">
                       {form.client_pays ? INDICATIFS[form.client_pays] : "🌍"}
                     </div>
-                    <Input value={form.client_contact} onChange={e => setForm({ ...form, client_contact: e.target.value })}
-                      placeholder="Numéro de téléphone" required />
+                    <Input value={form.client_contact} onChange={e => setForm({ ...form, client_contact: e.target.value })} placeholder="Numéro de téléphone" />
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium">Adresse (optionnel)</label>
-                  <Input value={form.client_adresse} onChange={e => setForm({ ...form, client_adresse: e.target.value })}
-                    placeholder="Adresse client" className="mt-1" />
+                  <Input value={form.client_adresse} onChange={e => setForm({ ...form, client_adresse: e.target.value })} placeholder="Adresse client" className="mt-1" />
                 </div>
               </div>
 
@@ -513,8 +457,7 @@ export default function FacturesPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-sm">Articles / Services</p>
-                  <Button type="button" size="sm" variant="outline"
-                    onClick={() => setArticles(p => [...p, emptyArticle()])} className="gap-1 h-8">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setArticles(p => [...p, emptyArt()])} className="gap-1 h-8">
                     <Plus className="w-3 h-3" /> Ajouter
                   </Button>
                 </div>
@@ -536,28 +479,28 @@ export default function FacturesPage() {
                       <div>
                         <label className="text-xs text-muted-foreground">Prix unitaire</label>
                         <Input type="number" min="0"
-                          value={art.prix_unitaire === 0 ? "" : art.prix_unitaire}
+                          value={art.prix_unitaire === 0 ? "" : String(art.prix_unitaire)}
                           onChange={e => updateArticle(idx, "prix_unitaire", e.target.value)}
                           placeholder="0" className="mt-1 bg-white" />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">Quantité</label>
                         <Input type="number" min="1"
-                          value={art.quantite === 0 ? "" : art.quantite}
+                          value={art.quantite === 0 ? "" : String(art.quantite)}
                           onChange={e => updateArticle(idx, "quantite", e.target.value)}
                           placeholder="1" className="mt-1 bg-white" />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">Montant</label>
                         <div className="mt-1 h-10 px-3 flex items-center rounded-md bg-primary/10 border border-primary/20 font-bold text-primary text-sm">
-                          {Math.round(Number(art.prix_unitaire) * Number(art.quantite)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")}
+                          {Math.round((parseFloat(String(art.prix_unitaire)) || 0) * (parseFloat(String(art.quantite)) || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")}
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
 
-                {/* ✅ Total en temps réel */}
+                {/* ✅ Total automatique */}
                 <div className="flex justify-end">
                   <div className="bg-primary text-white rounded-xl px-5 py-3 font-bold text-lg shadow-md">
                     Total : {Math.round(total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} {form.devise === "XOF" ? "FCFA" : "USD"}
@@ -599,8 +542,7 @@ export default function FacturesPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium">Note (optionnel)</label>
-                  <Input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
-                    placeholder="Note ou remarque..." className="mt-1" />
+                  <Input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Note ou remarque..." className="mt-1" />
                 </div>
               </div>
 
@@ -635,19 +577,19 @@ export default function FacturesPage() {
                   <div className="space-y-2">
                     {fList.map(f => (
                       <div key={f.id} className="bg-card border border-border rounded-xl p-3 flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-primary text-xs">{f.numero}</span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUT_COLORS[f.statut]}`}>
                               {STATUT_LABELS[f.statut]}
                             </span>
                           </div>
-                          <div className="font-semibold text-sm">{f.client_nom}</div>
-                          <div className="text-xs text-muted-foreground">{(f as any).heure_facture || ""}</div>
-                          <div className="font-bold text-primary">{formatMontant(f.total, f.devise)}</div>
+                          <div className="font-semibold text-sm truncate">{f.client_nom}</div>
+                          <div className="text-xs text-muted-foreground">{f.heure_facture}</div>
+                          <div className="font-bold text-primary">{fmt(f.total, f.devise)}</div>
                         </div>
                         <button onClick={() => generateFacturePDF(f, f.articles || [])}
-                          className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors">
+                          className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors flex-shrink-0">
                           <FileDown className="w-4 h-4" />
                         </button>
                       </div>
@@ -686,9 +628,10 @@ export default function FacturesPage() {
                             </div>
                             <div className="font-semibold mt-0.5 truncate">{facture.client_nom}</div>
                             <div className="text-xs text-muted-foreground">
-                              {new Date(facture.date_facture).toLocaleDateString("fr-FR")} {(facture as any).heure_facture && `à ${(facture as any).heure_facture}`}
+                              {new Date(facture.date_facture).toLocaleDateString("fr-FR")}
+                              {facture.heure_facture && ` à ${facture.heure_facture}`}
                             </div>
-                            <div className="text-lg font-black text-primary mt-1">{formatMontant(facture.total, facture.devise)}</div>
+                            <div className="text-lg font-black text-primary mt-1">{fmt(facture.total, facture.devise)}</div>
                           </div>
                           <div className="flex flex-col gap-1 flex-shrink-0">
                             <button onClick={() => generateFacturePDF(facture, facture.articles || [])}
@@ -722,8 +665,8 @@ export default function FacturesPage() {
                                 {facture.articles.map((art, i) => (
                                   <div key={i} className="flex justify-between items-center text-sm bg-white border border-border rounded-lg px-3 py-2">
                                     <span className="flex-1 truncate">{art.nom}</span>
-                                    <span className="text-muted-foreground text-xs mx-2">{art.quantite} × {formatMontant(art.prix_unitaire, facture.devise)}</span>
-                                    <span className="font-semibold text-primary">{formatMontant(art.montant, facture.devise)}</span>
+                                    <span className="text-muted-foreground text-xs mx-2">{art.quantite} × {fmt(art.prix_unitaire, facture.devise)}</span>
+                                    <span className="font-semibold text-primary">{fmt(art.montant, facture.devise)}</span>
                                   </div>
                                 ))}
                               </div>
