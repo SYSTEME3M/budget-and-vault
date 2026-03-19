@@ -19,7 +19,6 @@ import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
 import NotFound from "@/pages/NotFound";
 import BoutiqueParametresPage from "@/pages/BoutiqueParametresPage";
-<Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
 
 const queryClient = new QueryClient();
 
@@ -45,6 +44,7 @@ const App = () => (
           <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
           <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
+          <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
