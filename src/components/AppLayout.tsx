@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
   Search, ChevronRight, TrendingUp, TrendingDown, History, Shield,
-  HandCoins, PiggyBank, ArrowLeft
+  HandCoins, PiggyBank, ArrowLeft, Receipt
 } from "lucide-react";
 import { clearSession } from "@/lib/app-utils";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ const navItems = [
   { path: "/historique", icon: History, label: "Historique", color: "text-accent" },
   { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" },
   { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300" },
+  { path: "/factures", icon: Receipt, label: "Factures", color: "text-purple-300" },
   { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300" },
   { path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" },
   { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
@@ -130,7 +131,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
             {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* Back button */}
           {canGoBack && (
             <button
               onClick={() => navigate(-1)}
