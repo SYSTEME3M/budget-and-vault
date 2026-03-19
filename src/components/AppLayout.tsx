@@ -3,20 +3,20 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
   Search, ChevronRight, TrendingUp, TrendingDown, History, Shield,
-  HandCoins
+  HandCoins, PiggyBank, ArrowLeft
 } from "lucide-react";
 import { clearSession } from "@/lib/app-utils";
 import { Input } from "@/components/ui/input";
 import { ReactNode } from "react";
-
-const PROFILE_PHOTO = "https://i.ibb.co/pvMbk9MY/1771882604239.jpg";
+import avatarMale from "@/assets/avatar-male.png";
 
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-primary" },
   { path: "/entrees", icon: TrendingUp, label: "Entrées", color: "text-green-400" },
   { path: "/depenses", icon: TrendingDown, label: "Dépenses", color: "text-red-300" },
   { path: "/historique", icon: History, label: "Historique", color: "text-accent" },
-  { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" }, // ⬅️ AJOUT
+  { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" },
+  { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300" },
   { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300" },
   { path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" },
   { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
@@ -42,6 +42,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
   };
 
   const currentPage = navItems.find(i => i.path === location.pathname);
+  const canGoBack = location.pathname !== "/dashboard";
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -102,7 +103,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         <div className="p-2.5 border-t border-sidebar-border space-y-1">
           {sidebarOpen && (
             <div className="flex items-center gap-2.5 px-2 py-1.5">
-              <img src={PROFILE_PHOTO} alt="Eric" className="w-8 h-8 rounded-full object-cover border-2 border-accent flex-shrink-0" />
+              <img src={avatarMale} alt="Avatar" className="w-8 h-8 rounded-full object-cover border-2 border-accent flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate text-sidebar-foreground">Eric Kpakpo</div>
                 <div className="text-xs text-sidebar-foreground/50 truncate">Administrateur</div>
@@ -128,6 +129,18 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           >
             {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
+
+          {/* Back button */}
+          {canGoBack && (
+            <button
+              onClick={() => navigate(-1)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
+              title="Retour"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+
           <div className="flex-1 min-w-0">
             <h2 className="font-display font-bold text-foreground text-base truncate">{currentPage?.label || "MES SECRETS"}</h2>
           </div>
@@ -142,13 +155,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
               />
             </div>
           )}
-          <Link to="/profil">
-            <img
-              src={PROFILE_PHOTO}
-              alt="Eric"
-              className="w-8 h-8 rounded-full object-cover border-2 border-primary cursor-pointer hover:border-accent transition-colors"
-            />
-          </Link>
         </header>
 
         <main className="flex-1 p-4 lg:p-6">{children}</main>

@@ -94,7 +94,7 @@ export default function DepensesPage() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       playSuccessSound();
-      toast({ title: "✅ Succès !", description: "Dépense enregistrée." });
+      toast({ title: "Enregistré", description: "Dépense enregistrée." });
       setForm({ titre: "", montant: "", devise: "XOF", categorie: "Alimentation", note: "", date_depense: today });
       setShowForm(false);
       loadDepenses();
@@ -132,7 +132,6 @@ export default function DepensesPage() {
   return (
     <AppLayout searchQuery={search} onSearchChange={setSearch}>
       <div className="space-y-5 animate-fade-in-up">
-        {/* Header */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
             <h1 className="font-display font-bold text-xl flex items-center gap-2">
@@ -152,7 +151,6 @@ export default function DepensesPage() {
           </Button>
         </div>
 
-        {/* Form */}
         {showForm && (
           <div className="bg-card border border-primary/20 rounded-xl p-5 shadow-brand animate-fade-in-up">
             <h3 className="font-display font-bold mb-4 text-primary flex items-center gap-2">
@@ -174,13 +172,12 @@ export default function DepensesPage() {
               <Input placeholder="Note (optionnel)" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="sm:col-span-2" />
               <div className="sm:col-span-2 flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
-                <Button type="submit" className="bg-primary text-primary-foreground">✅ Enregistrer</Button>
+                <Button type="submit" className="bg-primary text-primary-foreground">Enregistrer</Button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Period tabs */}
         <div className="flex flex-wrap gap-2">
           {(Object.keys(periodLabels) as Period[]).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
@@ -190,7 +187,6 @@ export default function DepensesPage() {
           ))}
         </div>
 
-        {/* Historique filters */}
         {period === "historique" && (
           <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap gap-3 items-center">
             <select value={histoPeriod} onChange={e => setHistoPeriod(e.target.value as any)} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
@@ -230,7 +226,6 @@ export default function DepensesPage() {
           </div>
         )}
 
-        {/* Filtre catégorie */}
         <div className="flex flex-wrap gap-2 items-center">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <button onClick={() => setFilterCat("")} className={`px-3 py-1 rounded-full text-xs font-medium ${!filterCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Tout</button>
@@ -240,7 +235,6 @@ export default function DepensesPage() {
           ))}
         </div>
 
-        {/* Total */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 bg-destructive-bg border border-destructive/20 rounded-xl p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -261,7 +255,6 @@ export default function DepensesPage() {
           </div>
         </div>
 
-        {/* Liste */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
@@ -302,7 +295,7 @@ export default function DepensesPage() {
                         <td className="px-4 py-3 text-right font-bold text-destructive hidden md:table-cell">{fmt(montantXOF)}</td>
                         <td className="px-4 py-3 text-center text-muted-foreground text-xs hidden sm:table-cell">{d.date_depense}</td>
                         <td className="px-3 py-3 text-center">
-                          <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-destructive-bg hover:text-destructive transition-colors">
+                          <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg bg-destructive/10 hover:bg-destructive hover:text-white text-destructive transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
