@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Guards
 import AuthGuard from "@/components/AuthGuard";
-import AdminGuard from "@/components/AdminGuard";
+// L'import AdminGuard a été retiré car le fichier est manquant dans src/components
 
 // Pages
 import LoginPage from "@/pages/LoginPage";
@@ -24,7 +24,7 @@ import FacturesPage from "@/pages/FacturesPage";
 import BoutiqueParametresPage from "@/pages/BoutiqueParametresPage";
 import NotFound from "@/pages/NotFound";
 
-// Utils (à adapter selon ton système d'auth)
+// Utils
 const isAuthenticated = () => {
   return !!localStorage.getItem("token");
 };
@@ -147,13 +147,13 @@ const App = () => {
               }
             />
 
-            {/* ADMIN PROTÉGÉ */}
+            {/* ADMIN PROTÉGÉ (Utilise AuthGuard car AdminGuard est manquant) */}
             <Route
               path="/admin"
               element={
-                <AdminGuard>
+                <AuthGuard>
                   <AdminPage />
-                </AdminGuard>
+                </AuthGuard>
               }
             />
 
