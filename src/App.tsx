@@ -18,6 +18,8 @@ import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
 import NotFound from "@/pages/NotFound";
+import BoutiqueParametresPage from "@/pages/BoutiqueParametresPage";
+<Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
 
 const queryClient = new QueryClient();
 
