@@ -241,6 +241,51 @@ export type Database = {
         }
         Relationships: []
       }
+      investissements: {
+        Row: {
+          created_at: string | null
+          date_debut: string
+          date_objectif: string | null
+          description: string | null
+          devise: string
+          id: string
+          montant_actuel: number
+          montant_objectif: number
+          nom: string
+          statut: string
+          type_investissement: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_debut?: string
+          date_objectif?: string | null
+          description?: string | null
+          devise?: string
+          id?: string
+          montant_actuel?: number
+          montant_objectif?: number
+          nom: string
+          statut?: string
+          type_investissement?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_debut?: string
+          date_objectif?: string | null
+          description?: string | null
+          devise?: string
+          id?: string
+          montant_actuel?: number
+          montant_objectif?: number
+          nom?: string
+          statut?: string
+          type_investissement?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       liens_contacts: {
         Row: {
           created_at: string | null
@@ -298,6 +343,66 @@ export type Database = {
           taille_bytes?: number | null
           type_media?: string
           url?: string
+        }
+        Relationships: []
+      }
+      prets: {
+        Row: {
+          created_at: string | null
+          date_echeance: string | null
+          date_pret: string
+          devise: string
+          id: string
+          montant: number
+          montant_rembourse: number
+          nom_personne: string
+          nom_temoin: string | null
+          note: string | null
+          objectif: string
+          signature_emprunteur: string | null
+          signature_preteur: string | null
+          signature_temoin: string | null
+          statut: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_echeance?: string | null
+          date_pret?: string
+          devise?: string
+          id?: string
+          montant?: number
+          montant_rembourse?: number
+          nom_personne: string
+          nom_temoin?: string | null
+          note?: string | null
+          objectif?: string
+          signature_emprunteur?: string | null
+          signature_preteur?: string | null
+          signature_temoin?: string | null
+          statut?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_echeance?: string | null
+          date_pret?: string
+          devise?: string
+          id?: string
+          montant?: number
+          montant_rembourse?: number
+          nom_personne?: string
+          nom_temoin?: string | null
+          note?: string | null
+          objectif?: string
+          signature_emprunteur?: string | null
+          signature_preteur?: string | null
+          signature_temoin?: string | null
+          statut?: string
+          type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -374,6 +479,82 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      remboursements: {
+        Row: {
+          created_at: string | null
+          date_remboursement: string
+          devise: string
+          id: string
+          montant: number
+          note: string | null
+          pret_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_remboursement?: string
+          devise?: string
+          id?: string
+          montant?: number
+          note?: string | null
+          pret_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_remboursement?: string
+          devise?: string
+          id?: string
+          montant?: number
+          note?: string | null
+          pret_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remboursements_pret_id_fkey"
+            columns: ["pret_id"]
+            isOneToOne: false
+            referencedRelation: "prets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      versements_investissement: {
+        Row: {
+          created_at: string | null
+          date_versement: string
+          devise: string
+          id: string
+          investissement_id: string | null
+          montant: number
+          note: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_versement?: string
+          devise?: string
+          id?: string
+          investissement_id?: string | null
+          montant?: number
+          note?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_versement?: string
+          devise?: string
+          id?: string
+          investissement_id?: string | null
+          montant?: number
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "versements_investissement_investissement_id_fkey"
+            columns: ["investissement_id"]
+            isOneToOne: false
+            referencedRelation: "investissements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
