@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
   Search, ChevronRight, TrendingUp, TrendingDown, History, Shield,
-  HandCoins, PiggyBank, ArrowLeft, Receipt
+  HandCoins, PiggyBank, ArrowLeft, Receipt, Store // Import de l'icône Store ajouté
 } from "lucide-react";
 import { clearSession } from "@/lib/app-utils";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ const navItems = [
   { path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" },
   { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
   { path: "/admin", icon: Shield, label: "Administration", color: "text-red-300" },
+  { path: "/boutique", icon: Store, label: "Boutique", color: "text-pink-300" }, // Nouveau lien ajouté ici
   { path: "/profil", icon: User, label: "Mon Profil", color: "text-gray-300" },
 ];
 
