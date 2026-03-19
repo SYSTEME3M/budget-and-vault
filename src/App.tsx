@@ -20,13 +20,12 @@ import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
 
-// Boutique - Espace Admin
-import BoutiqueParametresPage from "@/pages/BoutiqueParametresPage";
-import ProduitsPage from "@/pages/ProduitsPage";
-import CommandesPage from "@/pages/CommandesPage";
-
-// Boutique - Vitrine publique (pas de AuthGuard)
-import VitrinePage from "@/pages/VitrinePage";
+// Boutique - Nouvelles pages (dossier boutique/)
+import BoutiqueAccueilPage from "@/pages/boutique/AccueilPage";
+import BoutiqueProduitsPage from "@/pages/boutique/ProduitsPage";
+import BoutiqueCommandesPage from "@/pages/boutique/CommandesPage";
+import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
+import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
 
 import NotFound from "@/pages/NotFound";
 
@@ -58,14 +57,14 @@ const App = () => (
           <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          {/* ── Boutique Admin ── */}
-          <Route path="/boutique" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
+          {/* ── Boutique Admin (nouvelles pages) ── */}
+          <Route path="/boutique" element={<AuthGuard><BoutiqueAccueilPage /></AuthGuard>} />
+          <Route path="/boutique/produits" element={<AuthGuard><BoutiqueProduitsPage /></AuthGuard>} />
+          <Route path="/boutique/commandes" element={<AuthGuard><BoutiqueCommandesPage /></AuthGuard>} />
           <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
-          <Route path="/boutique/produits" element={<AuthGuard><ProduitsPage /></AuthGuard>} />
-          <Route path="/boutique/commandes" element={<AuthGuard><CommandesPage /></AuthGuard>} />
 
           {/* ── Vitrine publique (sans AuthGuard) ── */}
-          <Route path="/shop/:slug" element={<VitrinePage />} />
+          <Route path="/shop/:slug" element={<BoutiqueVitrinePage />} />
 
           {/* ── 404 ── */}
           <Route path="*" element={<NotFound />} />
