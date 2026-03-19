@@ -69,7 +69,7 @@ export function playSuccessSound() {
   }
 }
 
-// XOF to USD conversion rate (1 USD ≈ 600 XOF)
+// ─── Conversion XOF / USD ────────────────────────────────
 export const XOF_TO_USD = 0.00167;
 export const USD_TO_XOF = 600;
 
@@ -79,13 +79,20 @@ export function convertAmount(amount: number, from: "XOF" | "USD", to: "XOF" | "
   return amount * USD_TO_XOF;
 }
 
+// ✅ CORRIGÉ — plus de / dans les montants
 export function formatAmount(amount: number, devise: "XOF" | "USD"): string {
   if (devise === "USD") {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(amount);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency", currency: "USD", maximumFractionDigits: 2,
+    }).format(amount);
   }
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(amount) + " FCFA";
+  const formatted = Math.round(amount)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return formatted + " FCFA";
 }
 
+// ─── Dates ───────────────────────────────────────────────
 export function getWeekNumber(d: Date): number {
   const date = new Date(d);
   date.setHours(0, 0, 0, 0);
@@ -110,26 +117,63 @@ export function formatDatetime(dt: string): string {
     " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
+// ─── Sécurité session ────────────────────────────────────
 export const SESSION_KEY = "mes_secrets_auth";
 export const USER_SESSION_KEY = "mes_secrets_user";
+export const SESSION_EXPIRY_KEY = "mes_secrets_expiry";
+
+// Durée de session : 8 heures
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
+
+// ✅ Générer un token aléatoire sécurisé
+function generateToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array).map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 export function setSession() {
-  localStorage.setItem(SESSION_KEY, "authenticated");
+  const token = generateToken();
+  const expiry = Date.now() + SESSION_DURATION_MS;
+  localStorage.setItem(SESSION_KEY, token);
+  localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
   localStorage.removeItem(USER_SESSION_KEY);
 }
 
 export function setUserSession(userId: string, nom: string) {
-  localStorage.setItem(SESSION_KEY, "authenticated");
+  const token = generateToken();
+  const expiry = Date.now() + SESSION_DURATION_MS;
+  localStorage.setItem(SESSION_KEY, token);
+  localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
   localStorage.setItem(USER_SESSION_KEY, JSON.stringify({ userId, nom }));
 }
 
 export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(USER_SESSION_KEY);
+  localStorage.removeItem(SESSION_EXPIRY_KEY);
 }
 
+// ✅ Vérifie session + expiration
 export function isAuthenticated(): boolean {
-  return localStorage.getItem(SESSION_KEY) === "authenticated";
+  const token = localStorage.getItem(SESSION_KEY);
+  const expiry = localStorage.getItem(SESSION_EXPIRY_KEY);
+  if (!token || !expiry) return false;
+
+  const expiryTime = parseInt(expiry, 10);
+  if (Date.now() > expiryTime) {
+    // Session expirée → on nettoie
+    clearSession();
+    return false;
+  }
+  return true;
+}
+
+// ✅ Renouveler la session à chaque action
+export function renewSession() {
+  if (!isAuthenticated()) return;
+  const expiry = Date.now() + SESSION_DURATION_MS;
+  localStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
 }
 
 export function getCurrentUser(): { userId: string; nom: string } | null {
