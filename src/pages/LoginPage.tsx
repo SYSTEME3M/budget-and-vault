@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Eye, EyeOff, Lock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
-import { verifyAccessCode, ensureProfile, setSession } from "@/lib/app-utils";
+import { useNavigate, useLocation } from "react-router-dom";
+import { verifyAccessCode, verifyUserToken, ensureProfile, setSession, setUserSession } from "@/lib/app-utils";
 import { useToast } from "@/hooks/use-toast";
-
-const PROFILE_PHOTO = "https://i.ibb.co/pvMbk9MY/1771882604239.jpg";
+import avatarMale from "@/assets/avatar-male.png";
 
 export default function LoginPage() {
   const [code, setCode] = useState("");
@@ -14,7 +13,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Check if admin path
+  const isAdmin = location.pathname === "/admin-login" || window.location.pathname.includes("admin");
 
   useEffect(() => {
     ensureProfile();
@@ -30,15 +33,35 @@ export default function LoginPage() {
     if (!code.trim()) return;
     setLoading(true);
     try {
-      const ok = await verifyAccessCode(code.trim());
-      if (ok) {
-        setSession();
-        toast({ title: "✅ Accès autorisé", description: "Bienvenue Eric !" });
-        await new Promise(resolve => setTimeout(resolve, 100)); // ⬅️ AJOUT
-        window.location.href = "/dashboard";
+      // Check URL params for user token login
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      const userId = params.get("user");
+
+      if (token && userId && !isAdmin) {
+        // User login via token
+        const result = await verifyUserToken(userId, code.trim());
+        if (result) {
+          setUserSession(userId, result.nom);
+          toast({ title: "Accès autorisé", description: `Bienvenue ${result.nom} !` });
+          await new Promise(r => setTimeout(r, 100));
+          window.location.href = "/dashboard";
+        } else {
+          toast({ title: "Code incorrect", description: "Veuillez réessayer.", variant: "destructive" });
+          setCode("");
+        }
       } else {
-        toast({ title: "❌ Code incorrect", description: "Veuillez réessayer.", variant: "destructive" });
-        setCode("");
+        // Admin login
+        const ok = await verifyAccessCode(code.trim());
+        if (ok) {
+          setSession();
+          toast({ title: "Accès autorisé", description: "Bienvenue Eric !" });
+          await new Promise(r => setTimeout(r, 100));
+          window.location.href = "/dashboard";
+        } else {
+          toast({ title: "Code incorrect", description: "Veuillez réessayer.", variant: "destructive" });
+          setCode("");
+        }
       }
     } catch {
       toast({ title: "Erreur", description: "Problème de connexion.", variant: "destructive" });
@@ -47,14 +70,15 @@ export default function LoginPage() {
     }
   };
 
+  const params = new URLSearchParams(window.location.search);
+  const hasUserToken = params.get("token") && params.get("user");
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-destructive" />
         <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-primary opacity-5" />
         <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-accent opacity-10" />
-        <div className="absolute top-1/3 left-1/4 w-3 h-3 rounded-full bg-accent opacity-40" />
-        <div className="absolute bottom-1/3 right-1/4 w-2 h-2 rounded-full bg-destructive opacity-30" />
       </div>
 
       <div className="w-full max-w-sm animate-fade-in-up relative z-10">
@@ -68,18 +92,19 @@ export default function LoginPage() {
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full border-2 border-white" />
               <div className="absolute -bottom-4 right-16 w-20 h-20 rounded-full border-2 border-white" />
-              <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white" />
             </div>
             <div className="relative inline-block mb-3">
               <div className="w-24 h-24 rounded-full border-4 border-accent overflow-hidden mx-auto shadow-brand-lg">
-                <img src={PROFILE_PHOTO} alt="Eric Kpakpo" className="w-full h-full object-cover" />
+                <img src={avatarMale} alt="Avatar" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-accent rounded-full flex items-center justify-center shadow-sm">
                 <Shield className="w-4 h-4 text-accent-foreground" />
               </div>
             </div>
             <h1 className="font-display text-2xl font-black text-primary-foreground tracking-wide">MES SECRETS</h1>
-            <p className="text-primary-foreground/70 text-xs mt-1">Application privée • Eric Kpakpo</p>
+            <p className="text-primary-foreground/70 text-xs mt-1">
+              {hasUserToken ? "Connexion utilisateur" : "Application privée • Administrateur"}
+            </p>
           </div>
 
           <div className="px-7 py-7">

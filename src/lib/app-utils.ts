@@ -15,6 +15,19 @@ export async function verifyAccessCode(code: string): Promise<boolean> {
   return data.access_code_hash === hashed;
 }
 
+export async function verifyUserToken(userId: string, code: string): Promise<{ nom: string } | null> {
+  const hashed = await hashCode(code);
+  const { data } = await supabase
+    .from("app_users")
+    .select("id, nom, access_code_hash, is_active")
+    .eq("id", userId)
+    .eq("is_active", true)
+    .single();
+  if (!data) return null;
+  if (data.access_code_hash !== hashed) return null;
+  return { nom: data.nom };
+}
+
 export async function getProfile() {
   const { data } = await supabase.from("profiles").select("*").limit(1).single();
   return data;
@@ -27,7 +40,7 @@ export async function ensureProfile() {
     await supabase.from("profiles").insert({
       nom: "Eric Kpakpo",
       email: "erickpakpo786@gmail.com",
-      avatar_url: "https://i.ibb.co/pvMbk9MY/1771882604239.jpg",
+      avatar_url: null,
       access_code_hash: defaultHash,
     });
   } else if (!existing.access_code_hash || existing.access_code_hash === "DEFAULT_HASH") {
@@ -52,7 +65,7 @@ export function playSuccessSound() {
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.5);
   } catch (e) {
-    // Silently fail if audio is not available
+    // Silently fail
   }
 }
 
@@ -98,14 +111,33 @@ export function formatDatetime(dt: string): string {
 }
 
 export const SESSION_KEY = "mes_secrets_auth";
+export const USER_SESSION_KEY = "mes_secrets_user";
 
-// ✅ localStorage à la place de sessionStorage
 export function setSession() {
   localStorage.setItem(SESSION_KEY, "authenticated");
+  localStorage.removeItem(USER_SESSION_KEY);
 }
+
+export function setUserSession(userId: string, nom: string) {
+  localStorage.setItem(SESSION_KEY, "authenticated");
+  localStorage.setItem(USER_SESSION_KEY, JSON.stringify({ userId, nom }));
+}
+
 export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(USER_SESSION_KEY);
 }
+
 export function isAuthenticated(): boolean {
   return localStorage.getItem(SESSION_KEY) === "authenticated";
+}
+
+export function getCurrentUser(): { userId: string; nom: string } | null {
+  const raw = localStorage.getItem(USER_SESSION_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+export function isAdminUser(): boolean {
+  return isAuthenticated() && !getCurrentUser();
 }

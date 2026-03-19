@@ -96,7 +96,7 @@ export default function AdminPage() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       playSuccessSound();
-      toast({ title: "✅ Succès !", description: editingId ? "Utilisateur modifié." : "Compte créé." });
+      toast({ title: "Enregistré", description: editingId ? "Utilisateur modifié." : "Compte créé." });
       resetForm();
       loadUsers();
     }
@@ -109,13 +109,7 @@ export default function AdminPage() {
   };
 
   const handleEdit = (user: AppUser) => {
-    setForm({
-      nom: user.nom,
-      email: user.email,
-      code: "",
-      theme_color: user.theme_color,
-      features: user.features,
-    });
+    setForm({ nom: user.nom, email: user.email, code: "", theme_color: user.theme_color, features: user.features });
     setEditingId(user.id);
     setShowForm(true);
   };
@@ -133,9 +127,10 @@ export default function AdminPage() {
   };
 
   const copyLoginLink = (user: AppUser) => {
+    // User login link — no /admin in path
     const link = `${window.location.origin}/login?token=${user.login_token}&user=${user.id}`;
     navigator.clipboard.writeText(link);
-    toast({ title: "✅ Lien copié !", description: "Partagez ce lien à l'utilisateur." });
+    toast({ title: "Lien copié !", description: "Partagez ce lien à l'utilisateur." });
   };
 
   const toggleFeature = (feat: string) => {
@@ -145,7 +140,17 @@ export default function AdminPage() {
   return (
     <AppLayout>
       <div className="space-y-5 animate-fade-in-up">
-        {/* Header */}
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3">
+          <Shield className="w-6 h-6 text-primary flex-shrink-0" />
+          <div>
+            <div className="font-semibold text-sm">Accès administrateur</div>
+            <div className="text-xs text-muted-foreground">
+              Connexion admin: <code className="bg-muted px-1 rounded">{window.location.origin}/login/admin</code> &nbsp;|&nbsp;
+              Connexion utilisateur: <code className="bg-muted px-1 rounded">{window.location.origin}/login</code>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
             <h1 className="font-display font-bold text-xl flex items-center gap-2">
@@ -158,16 +163,14 @@ export default function AdminPage() {
           </Button>
         </div>
 
-        {/* Form */}
         {showForm && (
           <div className="bg-card border border-primary/20 rounded-xl p-5 shadow-brand animate-fade-in-up">
-            <h3 className="font-display font-bold mb-4 text-primary">{editingId ? "Modifier" : "Nouveau compte"}</h3>
+            <h3 className="font-display font-bold mb-4 text-primary">{editingId ? "Modifier" : "Nouveau compte utilisateur"}</h3>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input placeholder="Nom complet *" value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} required />
               <Input type="email" placeholder="Email *" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
               <Input type="password" placeholder={editingId ? "Nouveau code d'accès (optionnel)" : "Code d'accès *"} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
 
-              {/* Theme color */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Couleur thème</label>
                 <div className="flex gap-2 flex-wrap">
@@ -179,7 +182,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Features */}
               <div className="sm:col-span-2">
                 <label className="text-xs font-medium text-muted-foreground mb-2 block">Fonctionnalités autorisées</label>
                 <div className="flex flex-wrap gap-2">
@@ -199,13 +201,12 @@ export default function AdminPage() {
 
               <div className="sm:col-span-2 flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={resetForm}>Annuler</Button>
-                <Button type="submit" className="bg-primary text-primary-foreground">✅ {editingId ? "Modifier" : "Créer le compte"}</Button>
+                <Button type="submit" className="bg-primary text-primary-foreground">{editingId ? "Modifier" : "Créer le compte"}</Button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Users list */}
         {loading ? (
           <div className="p-8 text-center text-muted-foreground">Chargement...</div>
         ) : users.length === 0 ? (
@@ -230,7 +231,6 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground">{user.email}</div>
-                    {/* Features */}
                     <div className="flex flex-wrap gap-1 mt-2">
                       {Object.entries(user.features || {}).map(([feat, enabled]) => enabled && (
                         <span key={feat} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
@@ -252,7 +252,7 @@ export default function AdminPage() {
                     <button onClick={() => handleEdit(user)} className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary text-muted-foreground transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(user.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors">
+                    <button onClick={() => handleDelete(user.id)} className="p-1.5 rounded-lg bg-destructive/10 hover:bg-destructive hover:text-white text-destructive transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

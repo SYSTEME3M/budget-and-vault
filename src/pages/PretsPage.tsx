@@ -4,11 +4,10 @@ import { useToast } from "@/hooks/use-toast";
 import { formatAmount } from "@/lib/app-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, FileDown, ChevronDown, ChevronUp, Trash2, HandCoins, Wallet, Calendar } from "lucide-react";
+import { Plus, FileDown, ChevronDown, ChevronUp, Trash2, HandCoins, Wallet, Calendar, ArrowRight } from "lucide-react";
 import SignaturePad from "@/components/SignaturePad";
 import AppLayout from "@/components/AppLayout";
 
-// ─── Types ───────────────────────────────────────────────
 type Devise = "XOF" | "USD";
 type Statut = "en_attente" | "partiel" | "rembourse";
 type TypePret = "pret" | "dette";
@@ -40,7 +39,6 @@ interface Remboursement {
   note: string | null;
 }
 
-// ─── Constantes ──────────────────────────────────────────
 const STATUT_LABELS: Record<Statut, string> = {
   en_attente: "En attente",
   partiel: "Partiel",
@@ -53,7 +51,6 @@ const STATUT_COLORS: Record<Statut, string> = {
   rembourse: "bg-green-100 text-green-800",
 };
 
-// ─── Génération PDF via jsPDF ─────────────────────────────
 async function generatePDF(pret: Pret) {
   const jspdf = await import("jspdf");
   const { jsPDF } = jspdf;
@@ -72,10 +69,10 @@ async function generatePDF(pret: Pret) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("CONTRAT DE PRÊT", W / 2, 18, { align: "center" });
+  doc.text("CONTRAT DE PRET", W / 2, 18, { align: "center" });
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(pret.type === "pret" ? "Vous êtes le PRÊTEUR" : "Vous êtes l'EMPRUNTEUR", W / 2, 28, { align: "center" });
+  doc.text(pret.type === "pret" ? "Vous etes le PRETEUR" : "Vous etes l'EMPRUNTEUR", W / 2, 28, { align: "center" });
   doc.text(`Ref: ${pret.id.substring(0, 8).toUpperCase()}`, W / 2, 35, { align: "center" });
 
   let y = 52;
@@ -97,8 +94,8 @@ async function generatePDF(pret: Pret) {
 
   const infos = [
     ["Nom de l'autre partie :", pret.nom_personne],
-    ["Montant du prêt :", formatAmount(pret.montant, pret.devise)],
-    ["Date du prêt :", dateStr],
+    ["Montant du pret :", formatAmount(pret.montant, pret.devise)],
+    ["Date du pret :", dateStr],
     ["Objectif :", pret.objectif],
   ];
 
@@ -121,7 +118,7 @@ async function generatePDF(pret: Pret) {
     const ech = new Date(pret.date_echeance).toLocaleDateString("fr-FR", {
       day: "2-digit", month: "long", year: "numeric",
     });
-    doc.text(`Date de remboursement prévue : ${ech}`, margin + 5, y + 8);
+    doc.text(`Date de remboursement prevue : ${ech}`, margin + 5, y + 8);
     y += 20;
   }
 
@@ -129,27 +126,27 @@ async function generatePDF(pret: Pret) {
   const emprunteur = pret.type === "pret" ? pret.nom_personne : "Eric Kpakpo";
 
   const texteLines = [
-    `Entre les soussignés :`,
+    `Entre les soussignes :`,
     ``,
-    `- Le PRÊTEUR : ${preteur}`,
+    `- Le PRETEUR : ${preteur}`,
     `- L'EMPRUNTEUR : ${emprunteur}`,
-    pret.nom_temoin ? `- TÉMOIN : ${pret.nom_temoin}` : ``,
+    pret.nom_temoin ? `- TEMOIN : ${pret.nom_temoin}` : ``,
     ``,
-    `Il a été convenu ce qui suit :`,
+    `Il a ete convenu ce qui suit :`,
     ``,
-    `Article 1 - OBJET DU PRÊT`,
-    `Le prêteur consent à prêter à l'emprunteur la somme de`,
+    `Article 1 - OBJET DU PRET`,
+    `Le preteur consent a preter a l'emprunteur la somme de`,
     `${formatAmount(pret.montant, pret.devise)} (${pret.objectif}).`,
     ``,
     `Article 2 - REMBOURSEMENT`,
     pret.date_echeance
-      ? `L'emprunteur s'engage à rembourser la totalité au plus tard le ${new Date(pret.date_echeance).toLocaleDateString("fr-FR")}.`
-      : `L'emprunteur s'engage à rembourser selon les modalités convenues.`,
+      ? `L'emprunteur s'engage a rembourser la totalite au plus tard le ${new Date(pret.date_echeance).toLocaleDateString("fr-FR")}.`
+      : `L'emprunteur s'engage a rembourser selon les modalites convenues.`,
     ``,
     `Article 3 - BONNE FOI`,
-    `Les deux parties s'engagent à respecter les termes du présent contrat`,
-    `de bonne foi et à se notifier mutuellement de tout empêchement.`,
-  ];
+    `Les deux parties s'engagent a respecter les termes du present contrat`,
+    `de bonne foi et a se notifier mutuellement de tout empechement.`,
+  ].filter(l => l !== undefined) as string[];
 
   texteLines.forEach((ligne) => {
     if (y > 240) { doc.addPage(); y = 20; }
@@ -176,7 +173,7 @@ async function generatePDF(pret: Pret) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text(
-    `Statut : ${STATUT_LABELS[pret.statut]} — Remboursé : ${formatAmount(pret.montant_rembourse, pret.devise)} / ${formatAmount(pret.montant, pret.devise)}`,
+    `Statut : ${STATUT_LABELS[pret.statut]} - Rembourse : ${formatAmount(pret.montant_rembourse, pret.devise)} / ${formatAmount(pret.montant, pret.devise)}`,
     margin + 5, y + 8
   );
   y += 22;
@@ -200,48 +197,35 @@ async function generatePDF(pret: Pret) {
     doc.text(title, xPos + sigW / 2, y, { align: "center" });
     doc.setDrawColor(...bleu);
     doc.roundedRect(xPos, y + 3, sigW, 28, 2, 2);
-
-    // Sécurité : Vérification si c'est bien une base64 image PNG ou JPEG
     if (sigData && sigData.startsWith("data:image")) {
-      try {
-        doc.addImage(sigData, "PNG", xPos + 2, y + 5, sigW - 4, 22);
-      } catch (e) {
-        console.error("Erreur ajout signature PDF:", e);
-      }
+      try { doc.addImage(sigData, "PNG", xPos + 2, y + 5, sigW - 4, 22); } catch {}
     } else {
       doc.setTextColor(...gris);
       doc.setFontSize(8);
       doc.setFont("helvetica", "italic");
-      doc.text("Non signé", xPos + sigW / 2, y + 18, { align: "center" });
+      doc.text("Non signe", xPos + sigW / 2, y + 18, { align: "center" });
     }
-
     doc.setTextColor(...noir);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.text(nom, xPos + sigW / 2, y + 35, { align: "center" });
   };
 
-  await drawSigBox("PRÊTEUR", pret.signature_preteur, preteur, margin);
+  await drawSigBox("PRETEUR", pret.signature_preteur, preteur, margin);
   await drawSigBox("EMPRUNTEUR", pret.signature_emprunteur, emprunteur, margin + sigW + 5);
-  await drawSigBox("TÉMOIN", pret.signature_temoin, pret.nom_temoin || "—", margin + (sigW + 5) * 2);
+  await drawSigBox("TEMOIN", pret.signature_temoin, pret.nom_temoin || "—", margin + (sigW + 5) * 2);
 
-  const today = new Date().toLocaleDateString("fr-FR", {
-    day: "2-digit", month: "long", year: "numeric",
-  });
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   doc.setFillColor(...bleu);
   doc.rect(0, 282, W, 15, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(
-    `Document généré le ${today} — Application MES SECRETS — Confidentiel`,
-    W / 2, 291, { align: "center" }
-  );
+  doc.text(`Document genere le ${today} — Application MES SECRETS — Confidentiel`, W / 2, 291, { align: "center" });
 
   doc.save(`contrat_pret_${pret.nom_personne.replace(/\s/g, "_")}.pdf`);
 }
 
-// ─── Composant principal ──────────────────────────────────
 export default function PretsPage() {
   const { toast } = useToast();
   const [prets, setPrets] = useState<Pret[]>([]);
@@ -257,7 +241,7 @@ export default function PretsPage() {
     montant: "",
     devise: "XOF" as Devise,
     objectif: "",
-    date_pret: new Date().toISOString().split("T")[0], // AJOUT : Date par défaut (aujourd'hui)
+    date_pret: new Date().toISOString().split("T")[0],
     date_echeance: "",
     nom_temoin: "",
     note: "",
@@ -271,11 +255,11 @@ export default function PretsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: r }] = await Promise.all([
-      supabase.from("prets").select("*").order("created_at", { ascending: false }),
-      supabase.from("remboursements").select("*").order("date_remboursement", { ascending: false }),
+      supabase.from("prets" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("remboursements" as any).select("*").order("date_remboursement", { ascending: false }),
     ]);
-    setPrets((p as Pret[]) || []);
-    setRemboursements((r as Remboursement[]) || []);
+    setPrets((p as unknown as Pret[]) || []);
+    setRemboursements((r as unknown as Remboursement[]) || []);
     setLoading(false);
   };
 
@@ -288,13 +272,13 @@ export default function PretsPage() {
       return;
     }
 
-    const { error } = await supabase.from("prets").insert({
+    const { error } = await supabase.from("prets" as any).insert({
       type: activeTab,
       nom_personne: form.nom_personne,
       montant: parseFloat(form.montant),
       devise: form.devise,
       objectif: form.objectif,
-      date_pret: form.date_pret, // CORRECTION : On envoie la date du prêt
+      date_pret: form.date_pret,
       date_echeance: form.date_echeance || null,
       nom_temoin: form.nom_temoin || null,
       note: form.note || null,
@@ -307,7 +291,7 @@ export default function PretsPage() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "✅ Enregistré", description: `${activeTab === "pret" ? "Prêt" : "Dette"} ajouté avec succès !` });
+    toast({ title: "Enregistré", description: `${activeTab === "pret" ? "Prêt" : "Dette"} ajouté avec succès !` });
     setShowForm(false);
     setForm({ nom_personne: "", montant: "", devise: "XOF", objectif: "", date_pret: new Date().toISOString().split("T")[0], date_echeance: "", nom_temoin: "", note: "", signature_preteur: "", signature_emprunteur: "", signature_temoin: "" });
     load();
@@ -319,18 +303,18 @@ export default function PretsPage() {
     const nouveauTotal = pret.montant_rembourse + montant;
     const nouveauStatut: Statut = nouveauTotal >= pret.montant ? "rembourse" : "partiel";
 
-    const { error } = await supabase.from("remboursements").insert({
+    const { error } = await supabase.from("remboursements" as any).insert({
       pret_id: pret.id,
       montant,
       devise: pret.devise,
       note: rembForm.note || null,
     });
     if (!error) {
-      await supabase.from("prets").update({
+      await supabase.from("prets" as any).update({
         montant_rembourse: nouveauTotal,
         statut: nouveauStatut,
       }).eq("id", pret.id);
-      toast({ title: "✅ Remboursement enregistré !" });
+      toast({ title: "Remboursement enregistré !" });
       setShowRembForm(null);
       setRembForm({ montant: "", note: "" });
       load();
@@ -339,16 +323,17 @@ export default function PretsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer ce prêt ?")) return;
-    await supabase.from("prets").delete().eq("id", id);
+    await supabase.from("prets" as any).delete().eq("id", id);
     toast({ title: "Supprimé" });
     load();
   };
 
   const filteredPrets = prets.filter(p => p.type === activeTab);
+  const rembPour = (id: string) => remboursements.filter(r => r.pret_id === id);
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-foreground">Prêts & Dettes</h1>
@@ -375,200 +360,170 @@ export default function PretsPage() {
         {showForm && (
           <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm">
             <h2 className="font-bold text-lg text-foreground">
-              {activeTab === "pret" ? "➕ Nouveau prêt accordé" : "➕ Nouvelle dette"}
+              {activeTab === "pret" ? "Nouveau prêt accordé" : "Nouvelle dette"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="text-sm font-medium">Nom de la personne *</label>
-                  <Input
-                    value={form.nom_personne}
-                    onChange={e => setForm({ ...form, nom_personne: e.target.value })}
-                    placeholder="Ex: Jean Dupont"
-                    className="mt-1"
-                  />
+                  <Input value={form.nom_personne} onChange={e => setForm({ ...form, nom_personne: e.target.value })} placeholder="Ex: Jean Dupont" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Montant *</label>
-                  <Input
-                    type="number"
-                    value={form.montant}
-                    onChange={e => setForm({ ...form, montant: e.target.value })}
-                    placeholder="0"
-                    className="mt-1"
-                  />
+                  <Input type="number" value={form.montant} onChange={e => setForm({ ...form, montant: e.target.value })} placeholder="0" className="mt-1" />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Devise</label>
-                  <select
-                    value={form.devise}
-                    onChange={e => setForm({ ...form, devise: e.target.value as Devise })}
-                    className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                  >
+                  <select value={form.devise} onChange={e => setForm({ ...form, devise: e.target.value as Devise })} className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
                     <option value="XOF">FCFA (XOF)</option>
                     <option value="USD">Dollar (USD)</option>
                   </select>
                 </div>
                 <div className="col-span-2">
                   <label className="text-sm font-medium">Objectif du prêt *</label>
-                  <Input
-                    value={form.objectif}
-                    onChange={e => setForm({ ...form, objectif: e.target.value })}
-                    placeholder="Ex: Achat de matériel..."
-                    className="mt-1"
-                  />
+                  <Input value={form.objectif} onChange={e => setForm({ ...form, objectif: e.target.value })} placeholder="Ex: Achat de matériel..." className="mt-1" />
                 </div>
-                {/* AJOUT : Champ Date du prêt */}
                 <div>
                   <label className="text-sm font-medium">Date du prêt *</label>
-                  <Input
-                    type="date"
-                    value={form.date_pret}
-                    onChange={e => setForm({ ...form, date_pret: e.target.value })}
-                    className="mt-1"
-                  />
+                  <Input type="date" value={form.date_pret} onChange={e => setForm({ ...form, date_pret: e.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Date d'échéance (limite)</label>
-                  <Input
-                    type="date"
-                    value={form.date_echeance}
-                    onChange={e => setForm({ ...form, date_echeance: e.target.value })}
-                    className="mt-1"
-                  />
+                  <label className="text-sm font-medium">Date d'échéance</label>
+                  <Input type="date" value={form.date_echeance} onChange={e => setForm({ ...form, date_echeance: e.target.value })} className="mt-1" />
                 </div>
                 <div className="col-span-2">
                   <label className="text-sm font-medium">Nom du témoin (optionnel)</label>
-                  <Input
-                    value={form.nom_temoin}
-                    onChange={e => setForm({ ...form, nom_temoin: e.target.value })}
-                    placeholder="Nom du témoin"
-                    className="mt-1"
-                  />
+                  <Input value={form.nom_temoin} onChange={e => setForm({ ...form, nom_temoin: e.target.value })} placeholder="Nom du témoin" className="mt-1" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium">Note</label>
+                  <Input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Note optionnelle..." className="mt-1" />
                 </div>
               </div>
 
               <div className="space-y-4 pt-2 border-t border-border">
                 <p className="font-semibold text-sm text-primary">Signatures numériques</p>
-                <SignaturePad
-                  label="Signature du Prêteur (Eric Kpakpo)"
-                  onSave={sig => setForm({ ...form, signature_preteur: sig })}
-                />
-                <SignaturePad
-                  label={`Signature de l'Emprunteur (${form.nom_personne || "..."})`}
-                  onSave={sig => setForm({ ...form, signature_emprunteur: sig })}
-                />
+                <SignaturePad label="Signature du Prêteur (Eric Kpakpo)" onSave={sig => setForm({ ...form, signature_preteur: sig })} />
+                <SignaturePad label={`Signature de l'Emprunteur (${form.nom_personne || "..."})`} onSave={sig => setForm({ ...form, signature_emprunteur: sig })} />
                 {form.nom_temoin && (
-                  <SignaturePad
-                    label={`Signature du Témoin (${form.nom_temoin})`}
-                    onSave={sig => setForm({ ...form, signature_temoin: sig })}
-                  />
+                  <SignaturePad label={`Signature du Témoin (${form.nom_temoin})`} onSave={sig => setForm({ ...form, signature_temoin: sig })} />
                 )}
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" className="flex-1 bg-primary text-white">Enregistrer le contrat</Button>
+              <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
+                <Button type="submit" className="bg-primary text-white">Enregistrer le contrat</Button>
               </div>
             </form>
           </div>
         )}
 
         {loading ? (
-          <div className="text-center py-10 text-muted-foreground">Chargement...</div>
+          <div className="text-center text-muted-foreground p-8">Chargement...</div>
+        ) : filteredPrets.length === 0 ? (
+          <div className="text-center p-12 bg-card border border-border rounded-2xl">
+            <HandCoins className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Aucun {activeTab === "pret" ? "prêt" : "dette"} enregistré</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {filteredPrets.map(pret => {
               const reste = pret.montant - pret.montant_rembourse;
-              const pct = Math.min((pret.montant_rembourse / pret.montant) * 100, 100);
+              const pct = pret.montant > 0 ? Math.min(100, (pret.montant_rembourse / pret.montant) * 100) : 0;
               const isExpanded = expandedId === pret.id;
-              const pretRembs = remboursements.filter(r => r.pret_id === pret.id);
+              const rembList = rembPour(pret.id);
 
               return (
                 <div key={pret.id} className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                   <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${pret.type === "pret" ? "bg-orange-100" : "bg-red-100"}`}>
+                        {pret.type === "pret" ? <HandCoins className="w-5 h-5 text-orange-600" /> : <Wallet className="w-5 h-5 text-red-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-foreground">{pret.nom_personne}</span>
+                          <span className="font-semibold truncate">{pret.nom_personne}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUT_COLORS[pret.statut]}`}>
                             {STATUT_LABELS[pret.statut]}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-0.5">{pret.objectif}</p>
-                        <p className="text-lg font-black text-primary mt-1">{formatAmount(pret.montant, pret.devise)}</p>
+                        <div className="text-sm text-muted-foreground mt-0.5">{pret.objectif}</div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-0.5"><Calendar className="w-3 h-3" /> {pret.date_pret}</span>
+                          {pret.date_echeance && <span className="text-orange-600">Échéance: {pret.date_echeance}</span>}
+                        </div>
+                        <div className="mt-2">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-bold">{formatAmount(pret.montant_rembourse, pret.devise)} remboursé</span>
+                            <span className="text-muted-foreground">sur {formatAmount(pret.montant, pret.devise)}</span>
+                          </div>
+                          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          {pret.statut !== "rembourse" && (
+                            <div className="text-xs text-destructive mt-1 font-medium">Reste: {formatAmount(reste, pret.devise)}</div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => generatePDF(pret)} title="PDF">
-                          <FileDown className="w-4 h-4 text-primary" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(pret.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setExpandedId(isExpanded ? null : pret.id)}>
+                      <div className="flex flex-col gap-1 flex-shrink-0">
+                        <button onClick={() => generatePDF(pret)} className="p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-colors" title="Télécharger PDF">
+                          <FileDown className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setExpandedId(isExpanded ? null : pret.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
                           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Remboursé : {formatAmount(pret.montant_rembourse, pret.devise)}</span>
-                        <span>Reste : {formatAmount(reste, pret.devise)}</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </button>
+                        <button onClick={() => handleDelete(pret.id)} className="p-1.5 rounded-lg bg-destructive/10 hover:bg-destructive hover:text-white text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
 
                   {isExpanded && (
-                    <div className="border-t border-border px-4 pb-4 pt-3 space-y-3 bg-muted/20">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-muted-foreground">Prêt :</span>{" "}
-                          <span className="font-medium">{new Date(pret.date_pret).toLocaleDateString("fr-FR")}</span>
-                        </div>
-                        {pret.date_echeance && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-red-400" />
-                            <span className="text-muted-foreground">Échéance :</span>{" "}
-                            <span className="font-medium">{new Date(pret.date_echeance).toLocaleDateString("fr-FR")}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {pretRembs.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-muted-foreground uppercase">Historique</p>
-                          {pretRembs.map(r => (
-                            <div key={r.id} className="flex justify-between items-center text-xs bg-white rounded border border-border px-2 py-1">
-                              <span>{new Date(r.date_remboursement).toLocaleDateString("fr-FR")}</span>
-                              <span className="font-bold text-green-600">+{formatAmount(r.montant, r.devise)}</span>
+                    <div className="border-t border-border bg-muted/30 p-4 space-y-3">
+                      {pret.statut !== "rembourse" && (
+                        <div>
+                          <button
+                            onClick={() => setShowRembForm(showRembForm === pret.id ? null : pret.id)}
+                            className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                          >
+                            <ArrowRight className="w-4 h-4" /> Enregistrer un remboursement
+                          </button>
+                          {showRembForm === pret.id && (
+                            <div className="mt-3 p-3 bg-card border border-border rounded-xl flex flex-wrap gap-2 items-end">
+                              <div className="flex-1 min-w-32">
+                                <label className="text-xs font-medium">Montant</label>
+                                <Input type="number" value={rembForm.montant} onChange={e => setRembForm({ ...rembForm, montant: e.target.value })} placeholder="0" className="mt-1 h-8" />
+                              </div>
+                              <div className="flex-1 min-w-32">
+                                <label className="text-xs font-medium">Note</label>
+                                <Input value={rembForm.note} onChange={e => setRembForm({ ...rembForm, note: e.target.value })} placeholder="Optionnel" className="mt-1 h-8" />
+                              </div>
+                              <Button size="sm" onClick={() => handleRemboursement(pret)} className="bg-green-600 hover:bg-green-700 text-white h-8">
+                                Confirmer
+                              </Button>
                             </div>
-                          ))}
+                          )}
                         </div>
                       )}
 
-                      {pret.statut !== "rembourse" && (
-                        <div className="pt-2">
-                          {showRembForm === pret.id ? (
-                            <div className="bg-white border border-green-200 rounded-xl p-3 space-y-2">
-                              <Input
-                                type="number"
-                                placeholder="Montant"
-                                value={rembForm.montant}
-                                onChange={e => setRembForm({ ...rembForm, montant: e.target.value })}
-                              />
-                              <div className="flex gap-2">
-                                <Button size="sm" className="bg-green-600 text-white flex-1" onClick={() => handleRemboursement(pret)}>Confirmer</Button>
-                                <Button size="sm" variant="outline" onClick={() => setShowRembForm(null)}>Annuler</Button>
+                      {rembList.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Historique des remboursements</p>
+                          <div className="space-y-1.5">
+                            {rembList.map(r => (
+                              <div key={r.id} className="flex items-center justify-between text-xs bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                                <span className="text-muted-foreground">{r.date_remboursement}</span>
+                                <span className="font-bold text-green-700">{formatAmount(r.montant, r.devise)}</span>
+                                {r.note && <span className="text-muted-foreground italic">{r.note}</span>}
                               </div>
-                            </div>
-                          ) : (
-                            <Button size="sm" className="w-full bg-green-600 text-white" onClick={() => setShowRembForm(pret.id)}>+ Remboursement</Button>
-                          )}
+                            ))}
+                          </div>
                         </div>
+                      )}
+
+                      {pret.note && (
+                        <p className="text-xs text-muted-foreground italic">Note: {pret.note}</p>
                       )}
                     </div>
                   )}

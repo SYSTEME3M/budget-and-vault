@@ -93,7 +93,7 @@ export default function EntreesPage() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       playSuccessSound();
-      toast({ title: "✅ Succès !", description: "Entrée enregistrée." });
+      toast({ title: "Enregistré", description: "Entrée enregistrée." });
       setForm({ titre: "", montant: "", devise: "XOF", categorie: "Salaire", note: "", date_entree: today });
       setShowForm(false);
       loadEntrees();
@@ -131,7 +131,6 @@ export default function EntreesPage() {
   return (
     <AppLayout searchQuery={search} onSearchChange={setSearch}>
       <div className="space-y-5 animate-fade-in-up">
-        {/* Header */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
             <h1 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
@@ -151,7 +150,6 @@ export default function EntreesPage() {
           </Button>
         </div>
 
-        {/* Form */}
         {showForm && (
           <div className="bg-card border border-green-200 rounded-xl p-5 shadow-brand animate-fade-in-up">
             <h3 className="font-display font-bold mb-4 text-green-700 flex items-center gap-2">
@@ -173,13 +171,12 @@ export default function EntreesPage() {
               <Input placeholder="Note (optionnel)" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="sm:col-span-2" />
               <div className="sm:col-span-2 flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Annuler</Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">✅ Enregistrer</Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">Enregistrer</Button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Period tabs */}
         <div className="flex flex-wrap gap-2">
           {(Object.keys(periodLabels) as Period[]).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
@@ -189,7 +186,6 @@ export default function EntreesPage() {
           ))}
         </div>
 
-        {/* Historique filters */}
         {period === "historique" && (
           <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap gap-3 items-center">
             <select value={histoPeriod} onChange={e => setHistoPeriod(e.target.value as any)} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
@@ -229,7 +225,6 @@ export default function EntreesPage() {
           </div>
         )}
 
-        {/* Filtre catégorie */}
         <div className="flex flex-wrap gap-2 items-center">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <button onClick={() => setFilterCat("")} className={`px-3 py-1 rounded-full text-xs font-medium ${!filterCat ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}>Tout</button>
@@ -239,7 +234,6 @@ export default function EntreesPage() {
           ))}
         </div>
 
-        {/* Total */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -260,7 +254,6 @@ export default function EntreesPage() {
           </div>
         </div>
 
-        {/* Liste */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-muted-foreground">Chargement...</div>
@@ -301,7 +294,7 @@ export default function EntreesPage() {
                         <td className="px-4 py-3 text-right font-bold text-green-700 hidden md:table-cell">{fmt(montantXOF)}</td>
                         <td className="px-4 py-3 text-center text-muted-foreground text-xs hidden sm:table-cell">{d.date_entree}</td>
                         <td className="px-3 py-3 text-center">
-                          <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors">
+                          <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg bg-destructive/10 hover:bg-destructive hover:text-white text-destructive transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
