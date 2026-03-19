@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ShoppingCart, Plus, Minus, X, Phone, MessageCircle,
-  Search, Star, Tag, ChevronDown, Package, Link
+  Search, Star, Tag, Package
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────
@@ -29,11 +29,6 @@ interface PaiementProduit {
   nom_titulaire: string;
 }
 
-interface Variation {
-  nom: string;
-  valeurs: string[];
-}
-
 interface Produit {
   id: string;
   nom: string;
@@ -50,7 +45,6 @@ interface Produit {
   paiement_reception: boolean;
   paiement_lien: string | null;
   moyens_paiement: PaiementProduit[];
-  variations: Variation[];
 }
 
 interface PanierItem {
@@ -98,9 +92,6 @@ export default function VitrinePage() {
   const [panier, setPanier] = useState<PanierItem[]>([]);
   const [showPanier, setShowPanier] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [produitDetail, setProduitDetail] = useState<Produit | null>(null);
-  const [variationsChoisies, setVariationsChoisies] = useState<Record<string, string>>({});
-  const [qte, setQte] = useState(1);
   const [commandeSuccess, setCommandeSuccess] = useState(false);
   const [commandeNumero, setCommandeNumero] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -127,14 +118,13 @@ export default function VitrinePage() {
 
       const { data: prods } = await supabase
         .from("produits" as any)
-        .select("*, variations_produit(*)")
+        .select("*")
         .eq("boutique_id", (b as any).id)
         .eq("actif", true)
         .order("vedette", { ascending: false });
 
       const list = (prods as any[] || []).map(p => ({
         ...p,
-        variations: p.variations_produit || [],
         moyens_paiement: p.moyens_paiement || [],
       }));
       setProduits(list);
@@ -169,29 +159,6 @@ export default function VitrinePage() {
   }, 0);
   const nbArticles = panier.reduce((sum, item) => sum + item.quantite, 0);
 
-  const addToCart = (produit: Produit, quantite: number, variations: Record<string, string>) => {
-    setPanier(prev => {
-      const existing = prev.findIndex(i =>
-        i.produit.id === produit.id &&
-        JSON.stringify(i.variations_choisies) === JSON.stringify(variations)
-      );
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing].quantite += quantite;
-        return updated;
-      }
-      return [...prev, { produit, quantite, variations_choisies: variations }];
-    });
-    fbTrack(boutique, "AddToCart", {
-      content_ids: [produit.id],
-      content_name: produit.nom,
-      value: produit.prix_promo || produit.prix,
-      currency: boutique?.devise || "XOF",
-    });
-    setProduitDetail(null);
-    setShowPanier(true);
-  };
-
   const removeFromCart = (idx: number) => setPanier(prev => prev.filter((_, i) => i !== idx));
 
   const updateQte = (idx: number, delta: number) => {
@@ -200,11 +167,6 @@ export default function VitrinePage() {
       updated[idx].quantite = Math.max(1, updated[idx].quantite + delta);
       return updated;
     });
-  };
-
-  // ── Ouvrir produit → navigation vers page détail
-  const openProduit = (p: Produit) => {
-    navigate(`/shop/${slug}/produit/${p.id}`);
   };
 
   // ── Checkout
@@ -255,7 +217,6 @@ export default function VitrinePage() {
         }))
       );
 
-      // Réduire stock produits physiques
       for (const item of panier) {
         if (!item.produit.stock_illimite && item.produit.type === "physique") {
           await supabase.from("produits" as any)
@@ -310,7 +271,6 @@ export default function VitrinePage() {
           Votre commande <strong className="text-pink-600">{commandeNumero}</strong> a été reçue.
         </p>
         <p className="text-gray-400 text-sm mt-1">Le vendeur vous contactera bientôt.</p>
-
         {boutique?.whatsapp && (
           <a href={`https://wa.me/${boutique.whatsapp.replace(/[^0-9]/g, "")}?text=Bonjour, j'ai passé la commande ${commandeNumero}`}
             target="_blank" rel="noopener noreferrer"
@@ -318,7 +278,6 @@ export default function VitrinePage() {
             <MessageCircle className="w-5 h-5" /> Contacter via WhatsApp
           </a>
         )}
-
         <button onClick={() => setCommandeSuccess(false)}
           className="mt-3 w-full py-3 rounded-xl border border-gray-200 text-gray-600 font-medium">
           Continuer les achats
@@ -332,17 +291,13 @@ export default function VitrinePage() {
 
       {/* ── Header boutique ── */}
       <div className="bg-white border-b border-gray-100">
-        {/* Bannière */}
         {boutique?.banniere_url && (
           <div className="w-full h-32 overflow-hidden">
-            <img src={boutique.banniere_url} alt=""
-              className="w-full h-full object-cover" />
+            <img src={boutique.banniere_url} alt="" className="w-full h-full object-cover" />
           </div>
         )}
-
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            {/* Logo */}
             {boutique?.logo_url ? (
               <img src={boutique.logo_url} alt={boutique?.nom}
                 className="w-16 h-16 rounded-2xl object-cover border-2 border-pink-100 shadow-sm flex-shrink-0" />
@@ -351,7 +306,6 @@ export default function VitrinePage() {
                 <span className="text-pink-500 text-2xl font-black">{boutique?.nom?.[0]}</span>
               </div>
             )}
-
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-black text-gray-800 truncate">{boutique?.nom}</h1>
               {boutique?.description && (
@@ -363,8 +317,6 @@ export default function VitrinePage() {
                 </p>
               )}
             </div>
-
-            {/* Contact */}
             {boutique?.whatsapp && (
               <a href={`https://wa.me/${boutique.whatsapp.replace(/[^0-9]/g, "")}`}
                 target="_blank" rel="noopener noreferrer"
@@ -397,37 +349,27 @@ export default function VitrinePage() {
             </button>
           </div>
 
-          {/* Filtres catégories */}
-          {(categories.length > 0 || true) && (
-            <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
-              <button onClick={() => { setFilterCateg(""); setFilterType(""); }}
+          {/* Filtres */}
+          <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+            <button onClick={() => { setFilterCateg(""); setFilterType(""); }}
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                !filterCateg && !filterType ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}>Tout</button>
+            <button onClick={() => setFilterType(filterType === "physique" ? "" : "physique")}
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                filterType === "physique" ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600"
+              }`}>📦 Physique</button>
+            <button onClick={() => setFilterType(filterType === "numerique" ? "" : "numerique")}
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                filterType === "numerique" ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600"
+              }`}>💻 Numérique</button>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setFilterCateg(filterCateg === cat ? "" : cat)}
                 className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  !filterCateg && !filterType ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}>
-                Tout
-              </button>
-              <button onClick={() => setFilterType(filterType === "physique" ? "" : "physique")}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  filterType === "physique" ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600"
-                }`}>
-                📦 Physique
-              </button>
-              <button onClick={() => setFilterType(filterType === "numerique" ? "" : "numerique")}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  filterType === "numerique" ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600"
-                }`}>
-                💻 Numérique
-              </button>
-              {categories.map(cat => (
-                <button key={cat} onClick={() => setFilterCateg(filterCateg === cat ? "" : cat)}
-                  className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    filterCateg === cat ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600"
-                  }`}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
+                  filterCateg === cat ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600"
+                }`}>{cat}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -453,7 +395,6 @@ export default function VitrinePage() {
                     enRupture ? "opacity-60" : "cursor-pointer active:scale-95"
                   }`}>
 
-                  {/* Photo */}
                   <div className="relative w-full h-40 bg-gray-100">
                     {photo ? (
                       <img src={photo} alt={produit.nom} className="w-full h-full object-cover" />
@@ -462,63 +403,42 @@ export default function VitrinePage() {
                         <Package className="w-10 h-10 text-gray-200" />
                       </div>
                     )}
-
-                    {/* Badge promo */}
                     {pct > 0 && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full">
                         -{pct}%
                       </div>
                     )}
-
-                    {/* Badge vedette */}
                     {produit.vedette && (
                       <div className="absolute top-2 right-2 bg-yellow-400 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Star className="w-3 h-3 fill-white" />
                       </div>
                     )}
-
-                    {/* Badge type */}
                     <div className={`absolute bottom-2 left-2 text-xs font-medium px-2 py-0.5 rounded-full ${
-                      produit.type === "numerique"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-800/70 text-white"
+                      produit.type === "numerique" ? "bg-blue-500 text-white" : "bg-gray-800/70 text-white"
                     }`}>
                       {produit.type === "numerique" ? "💻 Digital" : "📦 Physique"}
                     </div>
-
-                    {/* Rupture stock */}
                     {enRupture && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full">
-                          Rupture de stock
-                        </span>
+                        <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full">Rupture de stock</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Infos */}
                   <div className="p-3">
                     <p className="font-semibold text-gray-800 text-sm line-clamp-2">{produit.nom}</p>
-
                     {produit.categorie && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <Tag className="w-3 h-3 text-gray-400" />
                         <span className="text-xs text-gray-400">{produit.categorie}</span>
                       </div>
                     )}
-
-                    {/* Prix */}
                     <div className="mt-1">
-                      <span className="font-black text-pink-600 text-sm">
-                        {formatPrix(prix, boutique?.devise)}
-                      </span>
+                      <span className="font-black text-pink-600 text-sm">{formatPrix(prix, boutique?.devise)}</span>
                       {produit.prix_promo && (
-                        <span className="text-xs text-red-400 line-through font-bold ml-1">
-                          {formatPrix(produit.prix, boutique?.devise)}
-                        </span>
+                        <span className="text-xs text-red-400 line-through font-bold ml-1">{formatPrix(produit.prix, boutique?.devise)}</span>
                       )}
                     </div>
-
                     {!enRupture && (
                       <button
                         onClick={e => { e.stopPropagation(); navigate(`/shop/${slug}/produit/${produit.id}`); }}
@@ -540,12 +460,10 @@ export default function VitrinePage() {
           <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[85vh] flex flex-col">
             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
               <h2 className="font-black text-lg text-gray-800">Mon panier ({nbArticles})</h2>
-              <button onClick={() => setShowPanier(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+              <button onClick={() => setShowPanier(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {panier.length === 0 ? (
                 <div className="text-center py-10">
@@ -556,8 +474,7 @@ export default function VitrinePage() {
                 panier.map((item, i) => (
                   <div key={i} className="flex gap-3 items-center bg-gray-50 rounded-xl p-3">
                     {item.produit.photos?.[0] && (
-                      <img src={item.produit.photos[0]} alt=""
-                        className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
+                      <img src={item.produit.photos[0]} alt="" className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm text-gray-800 truncate">{item.produit.nom}</p>
@@ -572,34 +489,29 @@ export default function VitrinePage() {
                     </div>
                     {item.produit.type === "physique" && (
                       <div className="flex items-center gap-1">
-                        <button onClick={() => updateQte(i, -1)}
-                          className="w-7 h-7 rounded-lg bg-gray-200 flex items-center justify-center">
+                        <button onClick={() => updateQte(i, -1)} className="w-7 h-7 rounded-lg bg-gray-200 flex items-center justify-center">
                           <Minus className="w-3 h-3" />
                         </button>
                         <span className="font-bold text-sm w-5 text-center">{item.quantite}</span>
-                        <button onClick={() => updateQte(i, 1)}
-                          className="w-7 h-7 rounded-lg bg-gray-200 flex items-center justify-center">
+                        <button onClick={() => updateQte(i, 1)} className="w-7 h-7 rounded-lg bg-gray-200 flex items-center justify-center">
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
                     )}
-                    <button onClick={() => removeFromCart(i)}
-                      className="w-7 h-7 rounded-lg bg-red-100 text-red-500 flex items-center justify-center ml-1">
+                    <button onClick={() => removeFromCart(i)} className="w-7 h-7 rounded-lg bg-red-100 text-red-500 flex items-center justify-center ml-1">
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))
               )}
             </div>
-
             {panier.length > 0 && (
               <div className="p-4 border-t border-gray-100 space-y-3">
                 <div className="flex justify-between font-black text-lg">
                   <span className="text-gray-800">Total</span>
                   <span className="text-pink-600">{formatPrix(totalPanier, boutique?.devise)}</span>
                 </div>
-                <button
-                  onClick={() => { setShowPanier(false); setShowCheckout(true); }}
+                <button onClick={() => { setShowPanier(false); setShowCheckout(true); }}
                   className="w-full py-4 rounded-2xl bg-pink-500 text-white font-black text-base active:bg-pink-600">
                   Commander maintenant
                 </button>
@@ -615,72 +527,50 @@ export default function VitrinePage() {
           <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
               <h2 className="font-black text-lg text-gray-800">Finaliser la commande</h2>
-              <button onClick={() => setShowCheckout(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+              <button onClick={() => setShowCheckout(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                 <X className="w-4 h-4" />
               </button>
             </div>
-
             <form onSubmit={handleCheckout} className="p-4 space-y-4">
               <p className="font-semibold text-sm text-pink-600">Vos informations</p>
-
               <div>
                 <label className="text-sm font-medium text-gray-700">Nom complet *</label>
-                <input value={checkoutForm.nom}
-                  onChange={e => setCheckoutForm({ ...checkoutForm, nom: e.target.value })}
-                  placeholder="Votre nom" required
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
+                <input value={checkoutForm.nom} onChange={e => setCheckoutForm({ ...checkoutForm, nom: e.target.value })}
+                  placeholder="Votre nom" required className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
               </div>
-
               <div>
                 <label className="text-sm font-medium text-gray-700">Téléphone *</label>
-                <input value={checkoutForm.telephone}
-                  onChange={e => setCheckoutForm({ ...checkoutForm, telephone: e.target.value })}
-                  placeholder="+229..." required
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
+                <input value={checkoutForm.telephone} onChange={e => setCheckoutForm({ ...checkoutForm, telephone: e.target.value })}
+                  placeholder="+229..." required className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
               </div>
-
               <div>
                 <label className="text-sm font-medium text-gray-700">Email (optionnel)</label>
-                <input type="email" value={checkoutForm.email}
-                  onChange={e => setCheckoutForm({ ...checkoutForm, email: e.target.value })}
-                  placeholder="email@exemple.com"
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
+                <input type="email" value={checkoutForm.email} onChange={e => setCheckoutForm({ ...checkoutForm, email: e.target.value })}
+                  placeholder="email@exemple.com" className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
               </div>
-
               <div>
                 <label className="text-sm font-medium text-gray-700">Adresse de livraison *</label>
-                <input value={checkoutForm.adresse}
-                  onChange={e => setCheckoutForm({ ...checkoutForm, adresse: e.target.value })}
-                  placeholder="Adresse complète" required
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
+                <input value={checkoutForm.adresse} onChange={e => setCheckoutForm({ ...checkoutForm, adresse: e.target.value })}
+                  placeholder="Adresse complète" required className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Ville *</label>
-                  <input value={checkoutForm.ville}
-                    onChange={e => setCheckoutForm({ ...checkoutForm, ville: e.target.value })}
-                    placeholder="Cotonou" required
-                    className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
+                  <input value={checkoutForm.ville} onChange={e => setCheckoutForm({ ...checkoutForm, ville: e.target.value })}
+                    placeholder="Cotonou" required className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Pays</label>
-                  <input value={checkoutForm.pays}
-                    onChange={e => setCheckoutForm({ ...checkoutForm, pays: e.target.value })}
+                  <input value={checkoutForm.pays} onChange={e => setCheckoutForm({ ...checkoutForm, pays: e.target.value })}
                     className="mt-1 w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-300" />
                 </div>
               </div>
-
               <div>
                 <label className="text-sm font-medium text-gray-700">Note (optionnel)</label>
-                <textarea value={checkoutForm.note}
-                  onChange={e => setCheckoutForm({ ...checkoutForm, note: e.target.value })}
+                <textarea value={checkoutForm.note} onChange={e => setCheckoutForm({ ...checkoutForm, note: e.target.value })}
                   placeholder="Instructions spéciales..."
                   className="mt-1 w-full h-20 px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-pink-300" />
               </div>
-
-              {/* Récap */}
               <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-sm">
                 <div className="flex justify-between text-gray-500">
                   <span>{nbArticles} article{nbArticles > 1 ? "s" : ""}</span>
@@ -690,11 +580,8 @@ export default function VitrinePage() {
                   <span className="text-gray-800">Total</span>
                   <span className="text-pink-600">{formatPrix(totalPanier, boutique?.devise)}</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  💡 Le vendeur vous contactera pour confirmer le mode de paiement
-                </p>
+                <p className="text-xs text-gray-400 mt-1">💡 Le vendeur vous contactera pour confirmer le mode de paiement</p>
               </div>
-
               <button type="submit" disabled={submitting}
                 className="w-full py-4 rounded-2xl bg-pink-500 text-white font-black text-base active:bg-pink-600 disabled:opacity-50">
                 {submitting ? "Envoi en cours..." : "Confirmer la commande"}
@@ -707,8 +594,7 @@ export default function VitrinePage() {
       {/* ── Footer ── */}
       <div className="text-center py-8 px-4 border-t border-gray-100 mt-6">
         {boutique?.telephone && (
-          <a href={`tel:${boutique.telephone}`}
-            className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-3 hover:text-gray-700">
+          <a href={`tel:${boutique.telephone}`} className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-3 hover:text-gray-700">
             <Phone className="w-4 h-4" /> {boutique.telephone}
           </a>
         )}
