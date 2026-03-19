@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
   Search, ChevronRight, TrendingUp, TrendingDown, History, Shield,
-  HandCoins, PiggyBank, ArrowLeft, Receipt, Store // Import de l'icône Store ajouté
+  HandCoins, PiggyBank, ArrowLeft, Receipt, Store, Package, ShoppingBag
 } from "lucide-react";
 import { clearSession } from "@/lib/app-utils";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,10 @@ const navItems = [
   { path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" },
   { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
   { path: "/admin", icon: Shield, label: "Administration", color: "text-red-300" },
-  { path: "/boutique", icon: Store, label: "Boutique", color: "text-pink-300" }, // Nouveau lien ajouté ici
+  // ── Boutique ──
+  { path: "/boutique", icon: Store, label: "Ma Boutique", color: "text-pink-300" },
+  { path: "/boutique/produits", icon: Package, label: "Mes Produits", color: "text-purple-300" },
+  { path: "/boutique/commandes", icon: ShoppingBag, label: "Commandes", color: "text-indigo-300" },
   { path: "/profil", icon: User, label: "Mon Profil", color: "text-gray-300" },
 ];
 
@@ -49,7 +52,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
   return (
     <div className="min-h-screen flex bg-muted/30">
       {mobileSidebarOpen && (
-        <div className="fixed inset-0 bg-foreground/30 z-20 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-foreground/30 z-20 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)} />
       )}
 
       <aside className={`
@@ -105,7 +109,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         <div className="p-2.5 border-t border-sidebar-border space-y-1">
           {sidebarOpen && (
             <div className="flex items-center gap-2.5 px-2 py-1.5">
-              <img src={avatarMale} alt="Avatar" className="w-8 h-8 rounded-full object-cover border-2 border-accent flex-shrink-0" />
+              <img src={avatarMale} alt="Avatar"
+                className="w-8 h-8 rounded-full object-cover border-2 border-accent flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold truncate text-sidebar-foreground">Eric Kpakpo</div>
                 <div className="text-xs text-sidebar-foreground/50 truncate">Administrateur</div>
@@ -143,7 +148,9 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           )}
 
           <div className="flex-1 min-w-0">
-            <h2 className="font-display font-bold text-foreground text-base truncate">{currentPage?.label || "MES SECRETS"}</h2>
+            <h2 className="font-display font-bold text-foreground text-base truncate">
+              {currentPage?.label || "MES SECRETS"}
+            </h2>
           </div>
           {onSearchChange && (
             <div className="relative hidden sm:block w-52">
