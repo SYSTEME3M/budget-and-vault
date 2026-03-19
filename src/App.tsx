@@ -16,6 +16,7 @@ import ProfilPage from "@/pages/ProfilPage";
 import AdminPage from "@/pages/AdminPage";
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
+import FacturesPage from "@/pages/FacturesPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +28,6 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
-          {/* /login = user login, /login/admin = admin login */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/login/admin" element={<LoginPage />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -37,6 +37,7 @@ const App = () => (
           <Route path="/historique" element={<AuthGuard><HistoriquePage /></AuthGuard>} />
           <Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
           <Route path="/investissements" element={<AuthGuard><InvestissementsPage /></AuthGuard>} />
+          <Route path="/factures" element={<AuthGuard><FacturesPage /></AuthGuard>} />
           <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
           <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
           <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
