@@ -3,14 +3,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Package, ShoppingBag, Settings,
   Eye, ChevronRight, Menu, X, ArrowLeft, Store,
-  Smartphone // Ajout de l'icône Smartphone
 } from "lucide-react";
 
 const boutiqueNav = [
   { path: "/boutique", icon: LayoutDashboard, label: "Dashboard", color: "text-blue-400" },
   { path: "/boutique/produits", icon: Package, label: "Produits", color: "text-purple-400" },
-  // Ajout de la nouvelle route ici
-  { path: "/boutique/produits-digitaux", icon: Smartphone, label: "Produits Digitaux", color: "text-blue-400" },
   { path: "/boutique/commandes", icon: ShoppingBag, label: "Commandes", color: "text-orange-400" },
   { path: "/boutique/parametres", icon: Settings, label: "Paramètres", color: "text-gray-400" },
 ];
@@ -25,8 +22,6 @@ export default function BoutiqueLayout({ children, boutiqueName = "Ma Boutique",
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const currentPage = boutiqueNav.find(i => i.path === location.pathname);
 
   return (
     <div className="min-h-screen bg-gray-50">
