@@ -1,7 +1,6 @@
 import AppLayout from "@/components/AppLayout";
-import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone } from "lucide-react";
+import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone, X } from "lucide-react";
 
-// ── Simuler l'utilisateur connecté (à remplacer par votre vrai système auth)
 const getCurrentUser = () => {
   const stored = localStorage.getItem("nexora_user");
   return stored ? JSON.parse(stored) : null;
@@ -77,34 +76,85 @@ export default function AbonnementPage() {
               </h2>
               <p className="text-gray-500 text-sm font-semibold">0 FCFA / mois</p>
             </div>
-            {!isPremium && (
+            {!isPremium && !isAdmin && (
               <span className="bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                 Votre plan actuel
               </span>
             )}
           </div>
 
-          <ul className="space-y-2.5 text-sm">
+          {/* Fonctionnalités incluses */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Inclus
+          </p>
+          <ul className="space-y-2.5 text-sm mb-5">
             {[
-              { label: "Boutique Nexora", desc: "Créer et gérer votre boutique" },
-              { label: "Factures illimitées", desc: "Créer autant de factures que vous voulez" },
-              { label: "Coffre-fort (10 comptes max)", desc: "Stocker vos accès en sécurité" },
-              { label: "Liens & Contacts", desc: "Gérer vos contacts et liens utiles" },
-              { label: "Tableau de bord", desc: "Vue d'ensemble de vos finances" },
-              { label: "Historique", desc: "Consulter l'historique de vos opérations" },
+              {
+                label: "Factures",
+                desc: "5 factures maximum",
+                badge: "5 max",
+                badgeColor: "bg-orange-100 text-orange-700",
+              },
+              {
+                label: "Coffre-fort",
+                desc: "10 comptes maximum",
+                badge: "10 max",
+                badgeColor: "bg-orange-100 text-orange-700",
+              },
+              {
+                label: "Liens & Contacts",
+                desc: "Sans limite",
+                badge: "Illimité",
+                badgeColor: "bg-green-100 text-green-700",
+              },
+              {
+                label: "Tableau de bord",
+                desc: "Vue d'ensemble de vos finances",
+                badge: null,
+                badgeColor: "",
+              },
+              {
+                label: "Historique",
+                desc: "Consulter l'historique",
+                badge: null,
+                badgeColor: "",
+              },
             ].map((f) => (
               <li key={f.label} className="flex items-start gap-2 text-gray-600">
                 <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-medium text-gray-700">{f.label}</span>
-                  <span className="text-gray-400"> — {f.desc}</span>
+                <div className="flex-1 flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <span className="font-medium text-gray-700">{f.label}</span>
+                    <span className="text-gray-400"> — {f.desc}</span>
+                  </div>
+                  {f.badge && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${f.badgeColor}`}>
+                      {f.badge}
+                    </span>
+                  )}
                 </div>
               </li>
             ))}
-            <li className="flex items-start gap-2 text-gray-400">
-              <CheckCircle2 className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" />
-              <span className="line-through">Marché Immobilier (Premium uniquement)</span>
-            </li>
+          </ul>
+
+          {/* Fonctionnalités non incluses */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Non inclus
+          </p>
+          <ul className="space-y-2 text-sm">
+            {[
+              "Boutique (Premium uniquement)",
+              "Entrées & Dépenses",
+              "Investissements",
+              "Prêts & Dettes",
+              "Médias",
+              "🏠 Marché Immobilier",
+            ].map((f) => (
+              <li key={f} className="flex items-center gap-2 text-gray-400">
+                <X className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <span className="line-through">{f}</span>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -144,35 +194,43 @@ export default function AbonnementPage() {
               )}
             </div>
 
+            {/* Fonctionnalités premium */}
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+              Tout inclus — Illimité
+            </p>
             <ul className="space-y-2.5 text-sm mb-6">
               {[
-                { label: "Tout du Plan Gratuit inclus", desc: "" },
+                { label: "Factures illimitées", desc: "Aucune limite" },
                 { label: "Coffre-fort illimité", desc: "Aucune limite de comptes" },
+                { label: "Liens & Contacts illimités", desc: "Sans limite" },
+                { label: "🛍️ Boutique complète", desc: "Créer et gérer votre boutique" },
                 { label: "Entrées & Dépenses illimitées", desc: "Suivi financier complet" },
                 { label: "Investissements illimités", desc: "Gérer tous vos investissements" },
                 { label: "Prêts & Dettes illimités", desc: "Suivre tous vos prêts" },
                 { label: "Médias illimités", desc: "Stocker tous vos fichiers" },
                 { label: "🏠 Marché Immobilier", desc: "Publier des annonces immobilières" },
-                { label: "Badge Premium ✓ sur le profil", desc: "Badge bleu visible sur votre profil" },
+                { label: "Badge Premium ✓ sur le profil", desc: "Badge bleu visible partout" },
               ].map((f) => (
                 <li key={f.label} className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-medium text-gray-800">{f.label}</span>
-                    {f.desc && <span className="text-gray-500"> — {f.desc}</span>}
+                    {f.desc && (
+                      <span className="text-gray-500"> — {f.desc}</span>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
 
-            {/* Bouton abonnement */}
+            {/* ── Bouton abonnement (si pas premium) ── */}
             {!isPremium && (
               <div className="space-y-3">
                 <button
                   onClick={() => alert("Paiement en cours d'intégration. Bientôt disponible !")}
                   className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
                   <Zap className="w-4 h-4" />
-                  S'abonner — 10 000 FCFA/mois
+                  S'abonner — 10 000 FCFA / mois
                 </button>
 
                 {/* Moyens de paiement */}
@@ -203,6 +261,7 @@ export default function AbonnementPage() {
               </div>
             )}
 
+            {/* ── Abonnement actif ── */}
             {isPremium && !isAdmin && (
               <div className="bg-white/70 rounded-xl p-3 border border-green-200 text-center">
                 <p className="text-sm font-bold text-green-700 flex items-center justify-center gap-2">
@@ -211,6 +270,48 @@ export default function AbonnementPage() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* ── Tableau comparatif ── */}
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+            <p className="font-black text-gray-800 text-sm">Comparatif des plans</p>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {[
+              { feature: "Factures", gratuit: "5 max", premium: "Illimité" },
+              { feature: "Coffre-fort", gratuit: "10 max", premium: "Illimité" },
+              { feature: "Liens & Contacts", gratuit: "Illimité", premium: "Illimité" },
+              { feature: "Boutique", gratuit: "❌", premium: "✅" },
+              { feature: "Entrées & Dépenses", gratuit: "❌", premium: "✅ Illimité" },
+              { feature: "Investissements", gratuit: "❌", premium: "✅ Illimité" },
+              { feature: "Prêts & Dettes", gratuit: "❌", premium: "✅ Illimité" },
+              { feature: "Médias", gratuit: "❌", premium: "✅ Illimité" },
+              { feature: "Marché Immobilier", gratuit: "❌", premium: "✅" },
+              { feature: "Badge Premium", gratuit: "❌", premium: "✅ Badge bleu" },
+            ].map((row) => (
+              <div key={row.feature} className="grid grid-cols-3 px-5 py-3 text-sm">
+                <span className="font-medium text-gray-700">{row.feature}</span>
+                <span className={`text-center text-xs font-semibold ${
+                  row.gratuit === "❌" ? "text-red-400" :
+                  row.gratuit === "Illimité" ? "text-green-600" : "text-orange-600"
+                }`}>
+                  {row.gratuit}
+                </span>
+                <span className={`text-center text-xs font-semibold ${
+                  row.premium.includes("✅") ? "text-violet-600" : "text-gray-400"
+                }`}>
+                  {row.premium}
+                </span>
+              </div>
+            ))}
+            {/* Header tableau */}
+            <div className="grid grid-cols-3 px-5 py-2 bg-violet-50 border-t border-violet-100">
+              <span className="text-xs font-bold text-gray-500">Fonctionnalité</span>
+              <span className="text-center text-xs font-bold text-gray-500">Gratuit</span>
+              <span className="text-center text-xs font-bold text-violet-600">Premium</span>
+            </div>
           </div>
         </div>
 
