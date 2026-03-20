@@ -11,7 +11,6 @@ import { logoutUser, getNexoraUser, isNexoraAdmin } from "@/lib/nexora-auth";
 import { Input } from "@/components/ui/input";
 import { ReactNode } from "react";
 import nexoraLogo from "@/assets/nexora-logo.png";
-import NexoraNotifications from "@/components/NexoraNotifications";
 
 const getNavItems = (isAdmin: boolean) => {
   const items = [
@@ -40,7 +39,6 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, searchQuery = "", onSearchChange }: AppLayoutProps) {
-  // ── Tous les hooks EN PREMIER — jamais de return avant ──
   const [sidebarOpen, setSidebarOpen]             = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
@@ -72,7 +70,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
     navigate("/login");
   };
 
-  // ── Return conditionnel APRÈS tous les hooks ──
+  // Return conditionnel APRÈS tous les hooks
   if (isAdminPage) {
     return <>{children}</>;
   }
@@ -235,9 +233,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
               />
             </div>
           )}
-
-          {/* ── Notifications ── */}
-          <NexoraNotifications />
         </header>
 
         <main className="flex-1 p-3 lg:p-5 overflow-x-hidden min-w-0 max-w-full">
