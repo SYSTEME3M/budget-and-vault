@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
   Search, ChevronRight, TrendingUp, History,
-  HandCoins, PiggyBank, ArrowLeft, Receipt, Store, BadgeCheck, Map
+  HandCoins, PiggyBank, ArrowLeft, Receipt, Store, BadgeCheck, Map,
+  ShieldCheck
 } from "lucide-react";
 import { clearSession, isAdminUser } from "@/lib/app-utils";
 import { logoutUser, getNexoraUser, isNexoraAdmin } from "@/lib/nexora-auth";
@@ -13,20 +14,21 @@ import nexoraLogo from "@/assets/nexora-logo.png";
 
 const getNavItems = (isAdmin: boolean) => {
   const items = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-red-400", bg: "bg-red-400/10" },
-    { path: "/entrees-depenses", icon: TrendingUp, label: "Entrées & Dépenses", color: "text-green-400", bg: "bg-green-400/10" },
-    { path: "/historique", icon: History, label: "Historique", color: "text-accent", bg: "bg-accent/10" },
-    { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300", bg: "bg-orange-300/10" },
-    { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300", bg: "bg-emerald-300/10" },
-    { path: "/factures", icon: Receipt, label: "Factures", color: "text-purple-300", bg: "bg-purple-300/10" },
-    { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300", bg: "bg-yellow-300/10" },
-    { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300", bg: "bg-green-300/10" },
-    { path: "/boutique", icon: Store, label: "Nexora Shop", color: "text-pink-300", bg: "bg-pink-300/10" },
-    { path: "/immobilier", icon: Map, label: "Marché Immobilier", color: "text-blue-300", bg: "bg-blue-300/10" },
+    { path: "/dashboard",        icon: LayoutDashboard, label: "Tableau de bord",    color: "text-red-400",     bg: "bg-red-400/10"     },
+    { path: "/entrees-depenses", icon: TrendingUp,       label: "Entrées & Dépenses", color: "text-green-400",   bg: "bg-green-400/10"   },
+    { path: "/historique",       icon: History,          label: "Historique",          color: "text-accent",      bg: "bg-accent/10"      },
+    { path: "/prets",            icon: HandCoins,        label: "Prêts & Dettes",      color: "text-orange-300",  bg: "bg-orange-300/10"  },
+    { path: "/investissements",  icon: PiggyBank,        label: "Investissements",     color: "text-emerald-300", bg: "bg-emerald-300/10" },
+    { path: "/factures",         icon: Receipt,          label: "Factures",            color: "text-purple-300",  bg: "bg-purple-300/10"  },
+    { path: "/coffre-fort",      icon: Lock,             label: "Coffre-fort",         color: "text-yellow-300",  bg: "bg-yellow-300/10"  },
+    { path: "/liens",            icon: Link2,            label: "Liens & Contacts",    color: "text-green-300",   bg: "bg-green-300/10"   },
+    { path: "/boutique",         icon: Store,            label: "Nexora Shop",         color: "text-pink-300",    bg: "bg-pink-300/10"    },
+    { path: "/immobilier",       icon: Map,              label: "Marché Immobilier",   color: "text-blue-300",    bg: "bg-blue-300/10"    },
   ];
 
   if (isAdmin) {
-    items.push({ path: "/medias", icon: Image, label: "Médias", color: "text-sky-300", bg: "bg-sky-300/10" });
+    items.push({ path: "/admin",  icon: ShieldCheck, label: "Panel Admin", color: "text-amber-400", bg: "bg-amber-400/10" });
+    items.push({ path: "/medias", icon: Image,       label: "Médias",      color: "text-sky-300",   bg: "bg-sky-300/10"  });
   }
 
   return items;
@@ -60,7 +62,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
 
   const currentPage = navItems.find(i =>
     i.path === location.pathname ||
-    (i.path === "/boutique" && location.pathname.startsWith("/boutique"))
+    (i.path === "/boutique" && location.pathname.startsWith("/boutique")) ||
+    (i.path === "/admin" && location.pathname === "/admin")
   );
   const canGoBack = location.pathname !== "/dashboard";
 
@@ -136,35 +139,47 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
                 location.pathname === "/entrees-depenses"
               ));
 
-            return (
-              <Link
-                key={path}
-                to={path}
-                onClick={() => setMobileSidebarOpen(false)}
-                title={!sidebarOpen ? label : undefined}
-                className={`
-                  flex items-center gap-3 rounded-xl transition-all duration-150 group
-                  ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
-                  ${active
-                    ? "bg-accent text-accent-foreground font-semibold shadow-sm"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  }
-                `}
-              >
-                {/* Icon container — toujours visible */}
-                <div className={`
-                  flex items-center justify-center rounded-lg flex-shrink-0
-                  ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}
-                  ${active ? "bg-white/20" : bg}
-                  transition-all duration-150
-                `}>
-                  <Icon className={`flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"} ${active ? "text-accent-foreground" : color}`} />
-                </div>
+            const isAdminItem = path === "/admin";
 
-                {sidebarOpen && (
-                  <span className="text-sm truncate">{label}</span>
+            return (
+              <div key={path}>
+                {/* Séparateur avant la section admin */}
+                {isAdminItem && (
+                  <div className="my-2 mx-1">
+                    <div className="h-px bg-sidebar-border opacity-40" />
+                    {sidebarOpen && (
+                      <p className="text-[10px] font-bold text-sidebar-foreground/30 uppercase tracking-widest px-2 pt-2 pb-1">
+                        Administration
+                      </p>
+                    )}
+                  </div>
                 )}
-              </Link>
+                <Link
+                  to={path}
+                  onClick={() => setMobileSidebarOpen(false)}
+                  title={!sidebarOpen ? label : undefined}
+                  className={`
+                    flex items-center gap-3 rounded-xl transition-all duration-150
+                    ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
+                    ${active
+                      ? "bg-accent text-accent-foreground font-semibold shadow-sm"
+                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    }
+                  `}
+                >
+                  <div className={`
+                    flex items-center justify-center rounded-lg flex-shrink-0
+                    ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}
+                    ${active ? "bg-white/20" : bg}
+                    transition-all duration-150
+                  `}>
+                    <Icon className={`flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"} ${active ? "text-accent-foreground" : color}`} />
+                  </div>
+                  {sidebarOpen && (
+                    <span className="text-sm truncate">{label}</span>
+                  )}
+                </Link>
+              </div>
             );
           })}
         </nav>
