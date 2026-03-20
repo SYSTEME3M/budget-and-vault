@@ -33,7 +33,7 @@ import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
 import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
 import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
 
-// Immobilier — ✅ les deux dans src/pages/ directement
+// Immobilier — Chemins corrigés (directement dans src/pages/)
 import ImmobilierPage from "@/pages/ImmobilierPage";
 import ProfilVendeurPage from "@/pages/ProfilVendeurPage";
 
@@ -42,14 +42,17 @@ import AbonnementPage from "@/pages/AbonnementPage";
 
 import NotFound from "@/pages/NotFound";
 
+// Initialisation du client de requête
 const queryClient = new QueryClient();
 
+// Composant pour les routes protégées par authentification
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
     <PageLoader duration={1500}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
+// Composant pour les routes réservées aux administrateurs
 const AdminPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard requireAdmin>
     <PageLoader duration={1500}>{children}</PageLoader>
@@ -85,7 +88,7 @@ const App = () => (
           {/* ── IMMOBILIER (protégé) ── */}
           <Route path="/immobilier" element={<ProtectedPage><ImmobilierPage /></ProtectedPage>} />
 
-          {/* ── PROFIL VENDEUR (public — sans AuthGuard) ── */}
+          {/* ── PROFIL VENDEUR (public) ── */}
           <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
 
           {/* ── MÉDIAS (Admin seulement) ── */}
@@ -111,13 +114,3 @@ const App = () => (
 );
 
 export default App;
-```
-
----
-
-**Ce qu'il faut faire :**
-
-**1 seul changement** — déplacer le fichier sur GitHub :
-```
-❌ Avant : src/pages/nexora/ProfilVendeurPage.tsx
-✅ Après : src/pages/ProfilVendeurPage.tsx
