@@ -39,6 +39,9 @@ import ProfilVendeurPage from "@/pages/ProfilVendeurPage";
 // Abonnement
 import AbonnementPage from "@/pages/AbonnementPage";
 
+// Admin
+import AdminPanelPage from "@/pages/AdminPanelPage";
+
 import NotFound from "@/pages/NotFound";
 
 import AppLayout from "@/components/AppLayout";
@@ -50,18 +53,18 @@ const queryClient = new QueryClient();
 // ── Page protégée (authentification requise, gratuit + premium)
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
-    <PageLoader duration={1500}>{children}</PageLoader>
+    <PageLoader duration={15000}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
 // ── Page admin uniquement
 const AdminPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard requireAdmin>
-    <PageLoader duration={1500}>{children}</PageLoader>
+    <PageLoader duration={15000}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
-// ── Mur premium (affiché quand non premium tente d'accéder à une route 100% premium)
+// ── Mur premium
 function PremiumWall() {
   const navigate = useNavigate();
   return (
@@ -97,7 +100,7 @@ function PremiumWall() {
 // ── Page 100% premium (accès bloqué si non premium)
 const PremiumPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
-    <PageLoader duration={1500}>
+    <PageLoader duration={15000}>
       {hasNexoraPremium() ? children : <PremiumWall />}
     </PageLoader>
   </NexoraAuthGuard>
@@ -124,15 +127,11 @@ const App = () => (
           <Route path="/abonnement"       element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
 
           {/* ── LIMITÉ gratuit / illimité premium (quota géré dans la page) ── */}
-          {/* Factures     : 10 max gratuit, illimité premium                  */}
           <Route path="/factures"         element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
-          {/* Prêts/Dettes : 5 prêts + 5 dettes max gratuit                   */}
           <Route path="/prets"            element={<ProtectedPage><PretsPage /></ProtectedPage>} />
-          {/* Entrées/Dép. : 5 entrées + 5 dépenses max gratuit               */}
           <Route path="/entrees-depenses" element={<ProtectedPage><EntreesDepensesPage /></ProtectedPage>} />
           <Route path="/entrees"          element={<Navigate to="/entrees-depenses" replace />} />
           <Route path="/depenses"         element={<Navigate to="/entrees-depenses" replace />} />
-          {/* Investissements : accessible à tous, sans limite                 */}
           <Route path="/investissements"  element={<ProtectedPage><InvestissementsPage /></ProtectedPage>} />
 
           {/* ── 100% PREMIUM (bloqué si non premium) ── */}
@@ -149,7 +148,8 @@ const App = () => (
           {/* ── PROFIL VENDEUR (public) ── */}
           <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
 
-          {/* ── MÉDIAS (admin seulement) ── */}
+          {/* ── ADMIN UNIQUEMENT ── */}
+          <Route path="/admin"  element={<AdminPage><AdminPanelPage /></AdminPage>} />
           <Route path="/medias" element={<AdminPage><MediasPage /></AdminPage>} />
 
           {/* ── 404 ── */}
