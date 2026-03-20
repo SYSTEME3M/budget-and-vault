@@ -11,35 +11,26 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
 
-  // Check if admin path
   const isAdmin = location.pathname === "/admin-login" || window.location.pathname.includes("admin");
 
   useEffect(() => {
     ensureProfile();
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
   }, []);
-
-  const clockStr = time.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const dateStr = time.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) return;
     setLoading(true);
     try {
-      // Check URL params for user token login
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
       const userId = params.get("user");
 
       if (token && userId && !isAdmin) {
-        // User login via token
         const result = await verifyUserToken(userId, code.trim());
         if (result) {
           setUserSession(userId, result.nom);
@@ -51,7 +42,6 @@ export default function LoginPage() {
           setCode("");
         }
       } else {
-        // Admin login
         const ok = await verifyAccessCode(code.trim());
         if (ok) {
           setSession();
@@ -75,6 +65,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+
+      {/* ── Décorations fond ── */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-destructive" />
         <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-primary opacity-5" />
@@ -82,12 +74,11 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-sm animate-fade-in-up relative z-10">
-        <div className="text-center mb-4">
-          <div className="font-mono text-3xl font-bold text-primary tracking-wider">{clockStr}</div>
-          <div className="text-sm text-muted-foreground capitalize mt-0.5">{dateStr}</div>
-        </div>
 
+        {/* ── Carte principale ── */}
         <div className="bg-card border border-border rounded-2xl shadow-brand-lg overflow-hidden">
+
+          {/* ── Header avec avatar ── */}
           <div className="bg-primary px-8 py-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full border-2 border-white" />
@@ -101,12 +92,15 @@ export default function LoginPage() {
                 <Shield className="w-4 h-4 text-accent-foreground" />
               </div>
             </div>
-            <h1 className="font-display text-2xl font-black text-primary-foreground tracking-wide">MES SECRETS</h1>
+            <h1 className="font-display text-2xl font-black text-primary-foreground tracking-wide">
+              MES SECRETS
+            </h1>
             <p className="text-primary-foreground/70 text-xs mt-1">
               {hasUserToken ? "Connexion utilisateur" : "Application privée • Administrateur"}
             </p>
           </div>
 
+          {/* ── Formulaire ── */}
           <div className="px-7 py-7">
             <div className="text-center mb-5">
               <div className="inline-flex items-center gap-2 bg-primary-bg text-primary px-4 py-2 rounded-full text-sm font-semibold border border-primary/20">
@@ -128,8 +122,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowCode(!showCode)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                   {showCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
@@ -137,8 +130,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={loading || !code.trim()}
-                className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-brand"
-              >
+                className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-brand">
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -153,6 +145,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
+            {/* ── Points décoratifs ── */}
             <div className="mt-5 flex justify-center gap-3">
               <div className="w-3 h-3 rounded-full bg-primary" />
               <div className="w-3 h-3 rounded-full bg-accent" />
