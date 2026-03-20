@@ -2,29 +2,35 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
-  Search, ChevronRight, TrendingUp, TrendingDown, History, Shield,
-  HandCoins, PiggyBank, ArrowLeft, Receipt, Store
+  Search, ChevronRight, TrendingUp, TrendingDown, History, 
+  HandCoins, PiggyBank, ArrowLeft, Receipt, Store, BadgeCheck, Map
 } from "lucide-react";
-import { clearSession } from "@/lib/app-utils";
+import { clearSession, isAdminUser } from "@/lib/app-utils";
+import { logoutUser, getNexoraUser, isNexoraAdmin } from "@/lib/nexora-auth";
 import { Input } from "@/components/ui/input";
 import { ReactNode } from "react";
-import avatarMale from "@/assets/avatar-male.png";
+import nexoraLogo from "@/assets/nexora-logo.png";
 
-const navItems = [
-  { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-primary" },
-  { path: "/entrees", icon: TrendingUp, label: "Entrées", color: "text-green-400" },
-  { path: "/depenses", icon: TrendingDown, label: "Dépenses", color: "text-red-300" },
-  { path: "/historique", icon: History, label: "Historique", color: "text-accent" },
-  { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" },
-  { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300" },
-  { path: "/factures", icon: Receipt, label: "Factures", color: "text-purple-300" },
-  { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300" },
-  { path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" },
-  { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
-  { path: "/admin", icon: Shield, label: "Administration", color: "text-red-300" },
-  { path: "/boutique", icon: Store, label: "Ma Boutique", color: "text-pink-300" },
-  { path: "/profil", icon: User, label: "Mon Profil", color: "text-gray-300" },
-];
+const getNavItems = (isAdmin: boolean) => {
+  const items = [
+    { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-primary" },
+    { path: "/entrees-depenses", icon: TrendingUp, label: "Entrées & Dépenses", color: "text-green-400" },
+    { path: "/historique", icon: History, label: "Historique", color: "text-accent" },
+    { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" },
+    { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300" },
+    { path: "/factures", icon: Receipt, label: "Factures", color: "text-purple-300" },
+    { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300" },
+    { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
+    { path: "/boutique", icon: Store, label: "Nexora Shop", color: "text-pink-300" },
+    { path: "/immobilier", icon: Map, label: "Marché Immobilier", color: "text-blue-300" },
+  ];
+
+  if (isAdmin) {
+    items.push({ path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" });
+  }
+
+  return items;
+};
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -38,12 +44,24 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const nexoraUser = getNexoraUser();
+  const adminUser = isNexoraAdmin() || isAdminUser();
+  const navItems = getNavItems(adminUser);
+
+  const displayName = nexoraUser?.nom_prenom || "Eric Kpakpo";
+  const displayRole = nexoraUser?.is_admin ? "Administrateur" : nexoraUser?.plan === "premium" ? "Premium" : "Gratuit";
+  const hasBadge = nexoraUser?.badge_premium || nexoraUser?.is_admin;
+
+  const handleLogout = async () => {
+    await logoutUser();
     clearSession();
     navigate("/login");
   };
 
-  const currentPage = navItems.find(i => i.path === location.pathname);
+  const currentPage = navItems.find(i => 
+    i.path === location.pathname || 
+    (i.path === "/boutique" && location.pathname.startsWith("/boutique"))
+  );
   const canGoBack = location.pathname !== "/dashboard";
 
   return (
@@ -61,15 +79,42 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
       `}>
         <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-destructive flex-shrink-0" />
 
-        <div className="flex items-center gap-3 px-3 py-3 border-b border-sidebar-border">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="text-accent-foreground font-display font-black text-sm">M</span>
+        {/* Logo + Profil en haut */}
+        <Link
+          to="/profil"
+          onClick={() => setMobileSidebarOpen(false)}
+          className="flex items-center gap-2.5 px-3 py-3 border-b border-sidebar-border hover:bg-sidebar-accent transition-colors"
+        >
+          <div className="relative flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-accent">
+              {nexoraUser?.avatar_url ? (
+                <img src={nexoraUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-accent/20 flex items-center justify-center">
+                  <User className="w-5 h-5 text-accent" />
+                </div>
+              )}
+            </div>
+            {hasBadge && (
+              <BadgeCheck className="absolute -bottom-1 -right-1 w-4 h-4 text-yellow-300 drop-shadow-sm" />
+            )}
           </div>
           {sidebarOpen && (
             <div className="min-w-0 flex-1">
-              <div className="font-display font-black text-sm text-sidebar-foreground truncate">MES SECRETS</div>
-              <div className="text-xs text-sidebar-foreground/50 truncate">Eric Kpakpo</div>
+              <div className="font-display font-black text-sm text-sidebar-foreground truncate flex items-center gap-1">
+                {displayName.split(" ")[0]}
+                {hasBadge && <BadgeCheck className="w-3.5 h-3.5 text-yellow-300 flex-shrink-0" />}
+              </div>
+              <div className="text-xs text-sidebar-foreground/50 truncate">{displayRole}</div>
             </div>
+          )}
+        </Link>
+
+        {/* Logo Nexora */}
+        <div className={`flex items-center gap-2 px-3 py-2 border-b border-sidebar-border ${sidebarOpen ? "" : "justify-center"}`}>
+          <img src={nexoraLogo} alt="Nexora" className="w-6 h-6 object-contain flex-shrink-0" />
+          {sidebarOpen && (
+            <span className="font-display font-black text-xs text-sidebar-foreground tracking-widest">NEXORA</span>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -82,7 +127,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
           {navItems.map(({ path, icon: Icon, label, color }) => {
             const active = location.pathname === path ||
-              (path === "/boutique" && location.pathname.startsWith("/boutique"));
+              (path === "/boutique" && location.pathname.startsWith("/boutique")) ||
+              (path === "/entrees-depenses" && (location.pathname === "/entrees" || location.pathname === "/depenses" || location.pathname === "/entrees-depenses"));
             return (
               <Link
                 key={path}
@@ -105,16 +151,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         </nav>
 
         <div className="p-2.5 border-t border-sidebar-border space-y-1">
-          {sidebarOpen && (
-            <div className="flex items-center gap-2.5 px-2 py-1.5">
-              <img src={avatarMale} alt="Avatar"
-                className="w-8 h-8 rounded-full object-cover border-2 border-accent flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate text-sidebar-foreground">Eric Kpakpo</div>
-                <div className="text-xs text-sidebar-foreground/50 truncate">Administrateur</div>
-              </div>
-            </div>
-          )}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-red-200 transition-colors"
@@ -145,11 +181,12 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
             </button>
           )}
 
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center gap-2">
             <h2 className="font-display font-bold text-foreground text-base truncate">
-              {currentPage?.label || "MES SECRETS"}
+              {currentPage?.label || "NEXORA"}
             </h2>
           </div>
+          
           {onSearchChange && (
             <div className="relative hidden sm:block w-52">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -166,7 +203,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         <main className="flex-1 p-4 lg:p-6">{children}</main>
 
         <footer className="py-2.5 px-6 border-t border-border text-center text-xs text-muted-foreground">
-          MES SECRETS — Eric Kpakpo © {new Date().getFullYear()}
+          NEXORA © {new Date().getFullYear()} — Tous droits réservés
         </footer>
       </div>
     </div>
