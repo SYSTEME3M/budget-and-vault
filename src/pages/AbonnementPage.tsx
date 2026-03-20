@@ -1,15 +1,11 @@
 import AppLayout from "@/components/AppLayout";
+import { getNexoraUser, isNexoraAdmin, hasNexoraPremium } from "@/lib/nexora-auth";
 import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone, X } from "lucide-react";
 
-const getCurrentUser = () => {
-  const stored = localStorage.getItem("nexora_user");
-  return stored ? JSON.parse(stored) : null;
-};
-
 export default function AbonnementPage() {
-  const user = getCurrentUser();
-  const isAdmin = user?.role === "admin";
-  const isPremium = user?.abonnement === "premium" || isAdmin;
+  const user = getNexoraUser();
+  const isAdmin = isNexoraAdmin();
+  const isPremium = hasNexoraPremium();
 
   return (
     <AppLayout>
@@ -89,36 +85,11 @@ export default function AbonnementPage() {
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inclus</p>
           <ul className="space-y-2.5 text-sm mb-5">
             {[
-              {
-                label: "Factures",
-                desc: "5 factures maximum",
-                badge: "5 max",
-                badgeColor: "bg-orange-100 text-orange-700",
-              },
-              {
-                label: "Coffre-fort",
-                desc: "10 comptes maximum",
-                badge: "10 max",
-                badgeColor: "bg-orange-100 text-orange-700",
-              },
-              {
-                label: "Liens & Contacts",
-                desc: "Sans limite",
-                badge: "Illimité",
-                badgeColor: "bg-green-100 text-green-700",
-              },
-              {
-                label: "Tableau de bord",
-                desc: "Vue d'ensemble de vos finances",
-                badge: null,
-                badgeColor: "",
-              },
-              {
-                label: "Historique",
-                desc: "Consulter l'historique",
-                badge: null,
-                badgeColor: "",
-              },
+              { label: "Factures",         desc: "5 factures maximum",             badge: "5 max",    badgeColor: "bg-orange-100 text-orange-700" },
+              { label: "Coffre-fort",      desc: "10 comptes maximum",             badge: "10 max",   badgeColor: "bg-orange-100 text-orange-700" },
+              { label: "Liens & Contacts", desc: "Sans limite",                    badge: "Illimité", badgeColor: "bg-green-100 text-green-700" },
+              { label: "Tableau de bord",  desc: "Vue d'ensemble de vos finances", badge: null,       badgeColor: "" },
+              { label: "Historique",       desc: "Consulter l'historique",         badge: null,       badgeColor: "" },
             ].map((f) => (
               <li key={f.label} className="flex items-start gap-2 text-gray-600">
                 <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
@@ -146,8 +117,8 @@ export default function AbonnementPage() {
               "Investissements",
               "Prêts & Dettes",
               "Médias",
-              "🏠 Marché Immobilier",
-              "Badge bleu Premium",
+              "Marché Immobilier",
+              "Badge Premium",
             ].map((f) => (
               <li key={f} className="flex items-center gap-2 text-gray-400">
                 <X className="w-4 h-4 text-red-400 flex-shrink-0" />
@@ -165,7 +136,6 @@ export default function AbonnementPage() {
             ? "border-violet-500 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-lg shadow-violet-100"
             : "border-violet-200 bg-gradient-to-br from-violet-50/50 to-indigo-50/50"
         }`}>
-          {/* Décoration */}
           <div className="absolute -top-6 -right-6 w-28 h-28 bg-violet-200/30 rounded-full" />
           <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-indigo-200/30 rounded-full" />
 
@@ -176,7 +146,6 @@ export default function AbonnementPage() {
                   <Star className="w-5 h-5 text-violet-600 fill-violet-600" />
                   Plan Premium
                 </h2>
-                {/* ✅ Prix en dollars */}
                 <p className="text-gray-900 font-black text-2xl mt-0.5">
                   10$
                   <span className="text-sm font-normal text-gray-500"> / mois</span>
@@ -200,16 +169,16 @@ export default function AbonnementPage() {
 
             <ul className="space-y-2.5 text-sm mb-6">
               {[
-                { label: "Factures illimitées", desc: "Aucune limite" },
-                { label: "Coffre-fort illimité", desc: "Aucune limite de comptes" },
-                { label: "Liens & Contacts illimités", desc: "Sans limite" },
-                { label: "🛍️ Boutique complète", desc: "Créer et gérer votre boutique" },
+                { label: "Factures illimitées",           desc: "Aucune limite" },
+                { label: "Coffre-fort illimité",          desc: "Aucune limite de comptes" },
+                { label: "Liens & Contacts illimités",    desc: "Sans limite" },
+                { label: "Boutique complète",             desc: "Créer et gérer votre boutique" },
                 { label: "Entrées & Dépenses illimitées", desc: "Suivi financier complet" },
-                { label: "Investissements illimités", desc: "Gérer tous vos investissements" },
-                { label: "Prêts & Dettes illimités", desc: "Suivre tous vos prêts" },
-                { label: "Médias illimités", desc: "Stocker tous vos fichiers" },
-                { label: "🏠 Marché Immobilier", desc: "Publier des annonces immobilières" },
-                { label: "Badge Premium ✓ sur le profil", desc: "Badge bleu visible partout" },
+                { label: "Investissements illimités",     desc: "Gérer tous vos investissements" },
+                { label: "Prêts & Dettes illimités",      desc: "Suivre tous vos prêts" },
+                { label: "Médias illimités",              desc: "Stocker tous vos fichiers" },
+                { label: "Marché Immobilier",             desc: "Publier des annonces immobilières" },
+                { label: "Badge Premium sur le profil",   desc: "Badge vert visible partout" },
               ].map((f) => (
                 <li key={f.label} className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0 mt-0.5" />
@@ -231,7 +200,6 @@ export default function AbonnementPage() {
                   S'abonner — 10$ / mois
                 </button>
 
-                {/* Moyens de paiement */}
                 <div className="bg-white/70 rounded-xl p-3 border border-violet-100">
                   <p className="text-xs font-semibold text-gray-600 mb-2 text-center">
                     Moyens de paiement disponibles
@@ -253,7 +221,7 @@ export default function AbonnementPage() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-400 text-center mt-2">
-                    🔒 Paiement sécurisé — Intégration API en cours
+                    Paiement sécurisé — Intégration API en cours
                   </p>
                 </div>
               </div>
