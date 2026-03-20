@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MapPin, Phone, MessageCircle, Eye } from "lucide-react";
 import { Annonce } from "@/types";
@@ -28,13 +28,14 @@ interface Props {
 }
 
 export default function AnnonceCard({ annonce, userId = "guest", onFavoriChange }: Props) {
-  const [favoris, setFavoris] = useState(annonce.favoris);
+  // ✅ Défensif : si favoris ou images sont null
+  const [favoris, setFavoris] = useState<string[]>(annonce.favoris ?? []);
   const [loadingFavori, setLoadingFavori] = useState(false);
 
   const isFavori = favoris.includes(userId);
-  const type = TYPE_LABELS[annonce.type];
-  const statut = STATUT_LABELS[annonce.statut];
-  const photo = annonce.images?.[0]
+  const type = TYPE_LABELS[annonce.type] ?? TYPE_LABELS.maison;
+  const statut = STATUT_LABELS[annonce.statut] ?? STATUT_LABELS.disponible;
+  const photo = annonce.images && annonce.images.length > 0
     ? `http://localhost:5000${annonce.images[0]}`
     : null;
 
@@ -44,9 +45,9 @@ export default function AnnonceCard({ annonce, userId = "guest", onFavoriChange 
     if (loadingFavori) return;
     setLoadingFavori(true);
     try {
-      const newFavoris = await toggleFavori(annonce._id, userId);
+      const newFavoris = await toggleFavori(annonce._id ?? annonce.id, userId);
       setFavoris(newFavoris);
-      onFavoriChange?.(annonce._id, newFavoris);
+      onFavoriChange?.(annonce._id ?? annonce.id, newFavoris);
     } catch (err) {
       console.error(err);
     }
@@ -59,8 +60,11 @@ export default function AnnonceCard({ annonce, userId = "guest", onFavoriChange 
       {/* Image */}
       <div className="relative w-full h-52 bg-gray-100 overflow-hidden">
         {photo ? (
-          <img src={photo} alt={annonce.titre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <img
+            src={photo}
+            alt={annonce.titre}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
             <span className="text-5xl">{type.emoji}</span>
@@ -73,15 +77,17 @@ export default function AnnonceCard({ annonce, userId = "guest", onFavoriChange 
         </div>
 
         {/* Favori button */}
-        <button onClick={handleFavori}
+        <button
+          onClick={handleFavori}
           className={`absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all ${
             isFavori ? "bg-red-500 text-white" : "bg-white/80 text-gray-600 hover:bg-white"
-          }`}>
+          }`}
+        >
           <Heart className={`w-4 h-4 ${isFavori ? "fill-white" : ""}`} />
         </button>
 
         {/* Nombre photos */}
-        {annonce.images.length > 1 && (
+        {annonce.images && annonce.images.length > 1 && (
           <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
             <Eye className="w-3 h-3" /> {annonce.images.length} photos
           </div>
@@ -116,21 +122,28 @@ export default function AnnonceCard({ annonce, userId = "guest", onFavoriChange 
 
         {/* Actions */}
         <div className="flex gap-2 mt-3">
-          <Link to={`/annonce/${annonce._id}`}
-            className="flex-1 py-2 rounded-xl bg-violet-50 text-violet-700 text-sm font-semibold text-center hover:bg-violet-100 transition-colors">
+          <Link
+            to={`/annonce/${annonce._id ?? annonce.id}`}
+            className="flex-1 py-2 rounded-xl bg-violet-50 text-violet-700 text-sm font-semibold text-center hover:bg-violet-100 transition-colors"
+          >
             Voir détail
           </Link>
           {annonce.whatsapp && (
-            <a href={`https://wa.me/${annonce.whatsapp.replace(/[^0-9]/g, "")}?text=Bonjour, je suis intéressé par votre annonce : ${annonce.titre}`}
-              target="_blank" rel="noopener noreferrer"
+            <a
+              href={`https://wa.me/${annonce.whatsapp.replace(/[^0-9]/g, "")}?text=Bonjour, je suis intéressé par votre annonce : ${annonce.titre}`}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
-              className="w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white flex-shrink-0 hover:opacity-90">
+              className="w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white flex-shrink-0 hover:opacity-90"
+            >
               <MessageCircle className="w-4 h-4" />
             </a>
           )}
-          <a href={`tel:${annonce.contact}`}
+          <a
+            href={`tel:${annonce.contact}`}
             onClick={e => e.stopPropagation()}
-            className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 flex-shrink-0 hover:bg-gray-200">
+            className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 flex-shrink-0 hover:bg-gray-200"
+          >
             <Phone className="w-4 h-4" />
           </a>
         </div>
