@@ -65,7 +65,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
   const canGoBack = location.pathname !== "/dashboard";
 
   return (
-    <div className="min-h-screen flex bg-muted/30">
+    // ✅ CORRECTION 1 — bloquer tout débordement horizontal à la racine
+    <div className="min-h-screen flex bg-muted/30 overflow-x-hidden max-w-[100vw]">
       {mobileSidebarOpen && (
         <div className="fixed inset-0 bg-foreground/30 z-20 lg:hidden"
           onClick={() => setMobileSidebarOpen(false)} />
@@ -162,7 +163,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         </div>
       </aside>
 
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden min-w-0 ${sidebarOpen ? "lg:ml-56" : "lg:ml-14"}`}>
+      {/* ✅ CORRECTION 2 — bloquer débordement sur le conteneur principal */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden min-w-0 w-0 ${sidebarOpen ? "lg:ml-56" : "lg:ml-14"}`}>
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 lg:px-6 h-14 flex items-center gap-3 shadow-sm">
           <button
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -200,7 +202,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           )}
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        {/* ✅ CORRECTION 3 — bloquer débordement dans le main */}
+        <main className="flex-1 p-3 lg:p-5 overflow-x-hidden min-w-0 max-w-full">{children}</main>
 
         <footer className="py-2.5 px-6 border-t border-border text-center text-xs text-muted-foreground">
           NEXORA © {new Date().getFullYear()} — Tous droits réservés
