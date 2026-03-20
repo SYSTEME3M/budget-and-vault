@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Annonce, Filtres } from "../types";
+import { Annonce, Filtres } from "@/types";
 
 const API = "http://localhost:5000/api";
 
