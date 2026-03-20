@@ -50,17 +50,21 @@ import { useNavigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
-// ── Page protégée (authentification requise, gratuit + premium)
+// ── Durées loader
+const LOADER_LOGIN = 15000; // 15s — splash screen complet pour login/inscription
+const LOADER_PAGE  = 800;   // 0.8s — transition rapide pour les autres pages
+
+// ── Page protégée (authentification requise)
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
-    <PageLoader duration={15000}>{children}</PageLoader>
+    <PageLoader duration={LOADER_PAGE}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
 // ── Page admin uniquement
 const AdminPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard requireAdmin>
-    <PageLoader duration={15000}>{children}</PageLoader>
+    <PageLoader duration={LOADER_PAGE}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
@@ -100,7 +104,7 @@ function PremiumWall() {
 // ── Page 100% premium (accès bloqué si non premium)
 const PremiumPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
-    <PageLoader duration={15000}>
+    <PageLoader duration={LOADER_PAGE}>
       {hasNexoraPremium() ? children : <PremiumWall />}
     </PageLoader>
   </NexoraAuthGuard>
@@ -114,11 +118,15 @@ const App = () => (
         <Sonner />
         <Routes>
 
-          {/* ── AUTHENTICATION ── */}
-          <Route path="/login" element={<NexoraLoginPage />} />
+          {/* ── AUTHENTICATION — splash screen complet 15s ── */}
+          <Route path="/login" element={
+            <PageLoader duration={LOADER_LOGIN}>
+              <NexoraLoginPage />
+            </PageLoader>
+          } />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* ── GRATUIT + PREMIUM (accessible à tous les connectés) ── */}
+          {/* ── GRATUIT + PREMIUM ── */}
           <Route path="/dashboard"        element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
           <Route path="/historique"       element={<ProtectedPage><HistoriquePage /></ProtectedPage>} />
           <Route path="/coffre-fort"      element={<ProtectedPage><CoffreFortPage /></ProtectedPage>} />
@@ -126,7 +134,7 @@ const App = () => (
           <Route path="/profil"           element={<ProtectedPage><ProfilPage /></ProtectedPage>} />
           <Route path="/abonnement"       element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
 
-          {/* ── LIMITÉ gratuit / illimité premium (quota géré dans la page) ── */}
+          {/* ── LIMITÉ gratuit / illimité premium ── */}
           <Route path="/factures"         element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
           <Route path="/prets"            element={<ProtectedPage><PretsPage /></ProtectedPage>} />
           <Route path="/entrees-depenses" element={<ProtectedPage><EntreesDepensesPage /></ProtectedPage>} />
@@ -134,14 +142,14 @@ const App = () => (
           <Route path="/depenses"         element={<Navigate to="/entrees-depenses" replace />} />
           <Route path="/investissements"  element={<ProtectedPage><InvestissementsPage /></ProtectedPage>} />
 
-          {/* ── 100% PREMIUM (bloqué si non premium) ── */}
+          {/* ── 100% PREMIUM ── */}
           <Route path="/immobilier"           element={<PremiumPage><ImmobilierPage /></PremiumPage>} />
           <Route path="/boutique"             element={<PremiumPage><BoutiqueAccueilPage /></PremiumPage>} />
           <Route path="/boutique/produits"    element={<PremiumPage><BoutiqueProduitsPage /></PremiumPage>} />
           <Route path="/boutique/commandes"   element={<PremiumPage><CommandesPage /></PremiumPage>} />
           <Route path="/boutique/parametres"  element={<PremiumPage><BoutiqueParametresPage /></PremiumPage>} />
 
-          {/* ── VITRINE PUBLIQUE (aucune protection) ── */}
+          {/* ── VITRINE PUBLIQUE ── */}
           <Route path="/shop/:slug"                    element={<BoutiqueVitrinePage />} />
           <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
