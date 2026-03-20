@@ -141,7 +141,7 @@ export default function MesAnnoncesPage() {
       {/* Formulaire modification */}
       {editingAnnonce && (
         <AnnonceForm
-          initial={editingAnnonce}
+          initial={{ ...editingAnnonce, prix: String(editingAnnonce.prix) }}
           onSuccess={() => { setEditingAnnonce(null); load(); }}
           onCancel={() => setEditingAnnonce(null)}
         />
