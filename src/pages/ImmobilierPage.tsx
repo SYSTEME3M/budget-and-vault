@@ -12,7 +12,6 @@ import {
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 
-// ─── Types ────────────────────────────────────────────────
 type TypeBien = "maison" | "terrain" | "appartement" | "boutique";
 type Statut = "disponible" | "vendu" | "loue";
 
@@ -34,7 +33,6 @@ interface Annonce {
   created_at: string;
 }
 
-// ─── Constantes ───────────────────────────────────────────
 const TYPES: { value: TypeBien; label: string; emoji: string; color: string }[] = [
   { value: "maison",      label: "Maison",      emoji: "🏠", color: "bg-orange-100 text-orange-700 border-orange-200" },
   { value: "terrain",     label: "Terrain",     emoji: "🌿", color: "bg-green-100 text-green-700 border-green-200" },
@@ -52,7 +50,6 @@ function formatPrix(prix: number): string {
   return prix.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " $";
 }
 
-// ─── CopyButton ───────────────────────────────────────────
 function CopyButton({ text, label = "Copier" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -63,17 +60,24 @@ function CopyButton({ text, label = "Copier" }: { text: string; label?: string }
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }}
-      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all flex-shrink-0 ${
-        copied ? "bg-green-500 text-white" : "bg-violet-100 text-violet-700 hover:bg-violet-200"
-      }`}>
-      {copied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      <span className="hidden sm:inline">{copied ? "Copié !" : label}</span>
-      <span className="sm:hidden">{copied ? "✓" : "📋"}</span>
+      style={{
+        display: "flex", alignItems: "center", gap: "3px",
+        padding: "3px 7px", borderRadius: "8px",
+        fontSize: "10px", fontWeight: 600,
+        flexShrink: 0, whiteSpace: "nowrap",
+        background: copied ? "#22c55e" : "#ede9fe",
+        color: copied ? "#fff" : "#6d28d9",
+        border: "none", cursor: "pointer",
+      }}>
+      {copied
+        ? <CheckCircle2 style={{ width: 10, height: 10 }} />
+        : <Copy style={{ width: 10, height: 10 }} />
+      }
+      {copied ? "✓" : "📋"}
     </button>
   );
 }
 
-// ─── AnnonceCard ──────────────────────────────────────────
 function AnnonceCard({
   annonce, userId, onFavori, onEdit, onDelete, isOwner,
 }: {
@@ -94,119 +98,139 @@ function AnnonceCard({
   const vendeurUrl = `${window.location.origin}/immobilier/vendeur/${annonce.user_id}`;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col">
+    <div style={{
+      background: "#fff", borderRadius: "16px",
+      overflow: "hidden", border: "1px solid #f1f5f9",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+      display: "flex", flexDirection: "column",
+      width: "100%", boxSizing: "border-box",
+    }}>
 
-      {/* ── Image ── */}
-      <div className="relative w-full h-44 sm:h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex-shrink-0">
-        {photo ? (
-          <img src={photo} alt={annonce.titre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-5xl sm:text-6xl">{typeInfo.emoji}</span>
-          </div>
-        )}
-
-        {/* Statut */}
-        <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${statutInfo.color} text-white text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full`}>
+      {/* Image */}
+      <div style={{ position: "relative", width: "100%", height: "160px", flexShrink: 0, background: "#f1f5f9", overflow: "hidden" }}>
+        {photo
+          ? <img src={photo} alt={annonce.titre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "40px" }}>{typeInfo.emoji}</div>
+        }
+        <div style={{
+          position: "absolute", top: 8, left: 8,
+          background: statutInfo.color.replace("bg-", "").includes("green") ? "#22c55e" : statutInfo.color.includes("red") ? "#ef4444" : "#eab308",
+          color: "#fff", fontSize: "10px", fontWeight: 700,
+          padding: "2px 8px", borderRadius: "999px",
+        }}>
           {statutInfo.label}
         </div>
-
-        {/* Favori */}
-        <button onClick={() => onFavori(annonce.id)}
-          className={`absolute top-2 right-2 sm:top-3 sm:right-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all ${
-            isFavori ? "bg-red-500 text-white" : "bg-white/80 text-gray-600 hover:bg-white"
-          }`}>
-          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFavori ? "fill-white" : ""}`} />
+        <button
+          onClick={() => onFavori(annonce.id)}
+          style={{
+            position: "absolute", top: 8, right: 8,
+            width: 30, height: 30, borderRadius: "999px",
+            border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: isFavori ? "#ef4444" : "rgba(255,255,255,0.85)",
+            color: isFavori ? "#fff" : "#4b5563",
+          }}>
+          <Heart style={{ width: 13, height: 13, fill: isFavori ? "#fff" : "none" }} />
         </button>
-
-        {/* Nb photos */}
         {annonce.images?.length > 1 && (
-          <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 bg-black/50 text-white text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full">
+          <div style={{
+            position: "absolute", bottom: 8, right: 8,
+            background: "rgba(0,0,0,0.5)", color: "#fff",
+            fontSize: "9px", padding: "2px 6px", borderRadius: "999px",
+          }}>
             📷 {annonce.images.length}
           </div>
         )}
       </div>
 
-      {/* ── Contenu ── */}
-      <div className="p-3 sm:p-4 flex flex-col flex-1">
+      {/* Contenu */}
+      <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", flex: 1 }}>
 
         {/* Badge type */}
-        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border self-start ${typeInfo.color}`}>
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: "3px",
+          fontSize: "10px", fontWeight: 600,
+          padding: "2px 8px", borderRadius: "999px",
+          border: "1px solid",
+          alignSelf: "flex-start",
+        }} className={typeInfo.color}>
           {typeInfo.emoji} {typeInfo.label}
         </span>
 
         {/* Titre */}
-        <h3 className="font-bold text-gray-900 mt-2 line-clamp-2 sm:line-clamp-1 text-sm sm:text-base leading-tight">
+        <div style={{
+          fontWeight: 700, fontSize: "12px", marginTop: "6px",
+          overflow: "hidden", textOverflow: "ellipsis",
+          display: "-webkit-box", WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical" as any,
+          lineHeight: 1.3, color: "#111827",
+        }}>
           {annonce.titre}
-        </h3>
+        </div>
 
         {/* Localisation */}
-        <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs sm:text-sm">
-          <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-          <span className="truncate">
+        <div style={{ display: "flex", alignItems: "center", gap: "3px", marginTop: "4px", color: "#6b7280" }}>
+          <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
+          <span style={{ fontSize: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {annonce.quartier ? `${annonce.quartier}, ` : ""}{annonce.ville}
           </span>
         </div>
 
-        {/* Description — masquée sur très petit écran */}
-        {annonce.description && (
-          <p className="hidden sm:block text-gray-400 text-xs mt-1.5 line-clamp-2">
-            {annonce.description}
-          </p>
-        )}
-
         {/* Prix */}
-        <p className="text-violet-600 font-black text-base sm:text-lg mt-2">
+        <div style={{ fontWeight: 900, fontSize: "14px", color: "#7c3aed", marginTop: "6px" }}>
           {formatPrix(annonce.prix)}
-        </p>
+        </div>
 
         {/* Vendeur */}
-        <div className="flex items-center justify-between mt-1 gap-2">
-          <p className="text-xs text-gray-400 truncate">Par {annonce.auteur_nom}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px", gap: "6px" }}>
+          <span style={{ fontSize: "9px", color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Par {annonce.auteur_nom}
+          </span>
           <Link to={`/immobilier/vendeur/${annonce.user_id}`}
-            className="text-xs text-violet-600 font-semibold hover:underline flex items-center gap-0.5 flex-shrink-0">
-            <User className="w-3 h-3" />
-            <span className="hidden sm:inline">Voir sa boutique</span>
-            <span className="sm:hidden">Boutique</span>
+            style={{ fontSize: "9px", color: "#7c3aed", fontWeight: 600, whiteSpace: "nowrap", textDecoration: "none", flexShrink: 0 }}>
+            <User style={{ width: 9, height: 9, display: "inline", marginRight: 2 }} />
+            Boutique
           </Link>
         </div>
 
-        {/* ── Liens partage (collapsible sur mobile) ── */}
-        <div className="mt-2">
+        {/* Liens partage collapsible */}
+        <div style={{ marginTop: "6px" }}>
           <button
             onClick={() => setShowLinks(!showLinks)}
-            className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg bg-gray-50 border border-gray-100 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
-            <span className="flex items-center gap-1.5">
-              <Share2 className="w-3 h-3 text-violet-500" />
-              Liens de partage
+            style={{
+              width: "100%", display: "flex", alignItems: "center",
+              justifyContent: "space-between", padding: "5px 8px",
+              borderRadius: "8px", background: "#f8fafc",
+              border: "1px solid #e2e8f0", fontSize: "10px",
+              fontWeight: 600, color: "#4b5563", cursor: "pointer",
+            }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <Share2 style={{ width: 10, height: 10, color: "#7c3aed" }} />
+              Liens
             </span>
             {showLinks
-              ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
-              : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              ? <ChevronUp style={{ width: 10, height: 10 }} />
+              : <ChevronDown style={{ width: 10, height: 10 }} />
             }
           </button>
 
           {showLinks && (
-            <div className="mt-2 space-y-1.5">
-              {/* Lien annonce */}
-              <div className="flex items-center gap-2 bg-violet-50 rounded-xl p-2 border border-violet-100">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-violet-500 font-semibold">🔗 Cette annonce</p>
-                  <p className="text-xs text-gray-400 font-mono truncate mt-0.5">
-                    {annonceUrl.replace("https://", "").substring(0, 30)}...
-                  </p>
+            <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#f5f3ff", borderRadius: "10px", padding: "6px 8px", border: "1px solid #ede9fe" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "9px", color: "#7c3aed", fontWeight: 600 }}>🔗 Cette annonce</div>
+                  <div style={{ fontSize: "9px", color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
+                    {annonceUrl.replace("https://", "").substring(0, 28)}...
+                  </div>
                 </div>
                 <CopyButton text={annonceUrl} />
               </div>
-
-              {/* Lien vendeur */}
-              <div className="flex items-center gap-2 bg-blue-50 rounded-xl p-2 border border-blue-100">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-blue-500 font-semibold">🏪 Boutique vendeur</p>
-                  <p className="text-xs text-gray-400 font-mono truncate mt-0.5">
-                    {vendeurUrl.replace("https://", "").substring(0, 30)}...
-                  </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#eff6ff", borderRadius: "10px", padding: "6px 8px", border: "1px solid #dbeafe" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "9px", color: "#2563eb", fontWeight: 600 }}>🏪 Boutique vendeur</div>
+                  <div style={{ fontSize: "9px", color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
+                    {vendeurUrl.replace("https://", "").substring(0, 28)}...
+                  </div>
                 </div>
                 <CopyButton text={vendeurUrl} />
               </div>
@@ -214,33 +238,51 @@ function AnnonceCard({
           )}
         </div>
 
-        {/* ── Actions contact ── */}
-        <div className="flex gap-2 mt-3">
+        {/* Actions contact */}
+        <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
           {annonce.whatsapp && (
             <a href={`https://wa.me/${annonce.whatsapp.replace(/[^0-9]/g, "")}?text=Bonjour, je suis intéressé par : ${annonce.titre}`}
               target="_blank" rel="noopener noreferrer"
-              className="flex-1 py-2 rounded-xl bg-[#25D366] text-white text-xs font-bold flex items-center justify-center gap-1 hover:opacity-90 active:scale-95 transition-all">
-              <MessageCircle className="w-3.5 h-3.5" />
-              <span>WhatsApp</span>
+              style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                gap: "4px", padding: "7px 6px", borderRadius: "10px",
+                background: "#25D366", color: "#fff", fontSize: "10px",
+                fontWeight: 700, textDecoration: "none",
+              }}>
+              <MessageCircle style={{ width: 11, height: 11 }} /> WA
             </a>
           )}
           <a href={`tel:${annonce.contact}`}
-            className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold flex items-center justify-center gap-1 hover:bg-gray-200 active:scale-95 transition-all">
-            <Phone className="w-3.5 h-3.5" />
-            <span>Appeler</span>
+            style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+              gap: "4px", padding: "7px 6px", borderRadius: "10px",
+              background: "#f1f5f9", color: "#374151", fontSize: "10px",
+              fontWeight: 700, textDecoration: "none",
+            }}>
+            <Phone style={{ width: 11, height: 11 }} /> Appel
           </a>
         </div>
 
-        {/* ── Actions propriétaire ── */}
+        {/* Actions propriétaire */}
         {isOwner && (
-          <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
+          <div style={{ display: "flex", gap: "6px", marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #f1f5f9" }}>
             <button onClick={() => onEdit(annonce)}
-              className="flex-1 py-2 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-violet-100 active:scale-95 transition-all">
-              <Edit2 className="w-3 h-3" /> Modifier
+              style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                gap: "3px", padding: "6px", borderRadius: "8px",
+                background: "#f5f3ff", color: "#6d28d9",
+                fontSize: "10px", fontWeight: 600, border: "none", cursor: "pointer",
+              }}>
+              <Edit2 style={{ width: 10, height: 10 }} /> Modifier
             </button>
             <button onClick={() => onDelete(annonce.id)}
-              className="flex-1 py-2 rounded-lg bg-red-50 text-red-500 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-red-100 active:scale-95 transition-all">
-              <Trash2 className="w-3 h-3" /> Supprimer
+              style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                gap: "3px", padding: "6px", borderRadius: "8px",
+                background: "#fef2f2", color: "#ef4444",
+                fontSize: "10px", fontWeight: 600, border: "none", cursor: "pointer",
+              }}>
+              <Trash2 style={{ width: 10, height: 10 }} /> Supprimer
             </button>
           </div>
         )}
@@ -249,10 +291,9 @@ function AnnonceCard({
   );
 }
 
-// ─── Page principale ──────────────────────────────────────
 export default function ImmobilierPage() {
-  const user    = getNexoraUser();
-  const { toast } = useToast();
+  const user       = getNexoraUser();
+  const { toast }  = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasPremium = user?.plan === "premium" || user?.plan === "admin";
@@ -267,12 +308,11 @@ export default function ImmobilierPage() {
   const [showFiltres,    setShowFiltres]    = useState(false);
   const [copiedProfil,   setCopiedProfil]   = useState(false);
 
-  // Filtres
-  const [searchQ,      setSearchQ]      = useState("");
-  const [filterType,   setFilterType]   = useState<TypeBien | "">("");
-  const [filterVille,  setFilterVille]  = useState("");
-  const [filterPrixMax,setFilterPrixMax]= useState("");
-  const [filterStatut, setFilterStatut] = useState<Statut | "">("");
+  const [searchQ,       setSearchQ]       = useState("");
+  const [filterType,    setFilterType]    = useState<TypeBien | "">("");
+  const [filterVille,   setFilterVille]   = useState("");
+  const [filterPrixMax, setFilterPrixMax] = useState("");
+  const [filterStatut,  setFilterStatut]  = useState<Statut | "">("");
 
   const emptyForm = {
     titre: "", description: "", prix: "",
@@ -286,7 +326,6 @@ export default function ImmobilierPage() {
 
   const monProfilUrl = `${window.location.origin}/immobilier/vendeur/${userId}`;
 
-  // ── Charger
   const loadAnnonces = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -298,7 +337,6 @@ export default function ImmobilierPage() {
   };
   useEffect(() => { loadAnnonces(); }, []);
 
-  // ── Upload
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length + form.images.length > 6) {
@@ -322,7 +360,6 @@ export default function ImmobilierPage() {
     setUploadingPhoto(false);
   };
 
-  // ── Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.titre || !form.prix || !form.ville || !form.contact) {
@@ -392,150 +429,177 @@ export default function ImmobilierPage() {
     return matchSearch && matchType && matchVille && matchPrix && matchStatut;
   });
 
-  const hasFilters   = filterType || filterVille || filterPrixMax || filterStatut;
-  const mesAnnonces  = annonces.filter(a => a.user_id === userId);
+  const hasFilters  = filterType || filterVille || filterPrixMax || filterStatut;
+  const mesAnnonces = annonces.filter(a => a.user_id === userId);
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-5 animate-fade-in-up pb-10 px-0 sm:px-0">
+      {/* Conteneur principal — soudé, rien ne dépasse */}
+      <div style={{
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+      }}>
 
-        {/* ════════════════════════════
-            HERO
-        ════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-primary p-4 sm:p-6 text-primary-foreground shadow-brand-lg">
+        {/* ── Hero ── */}
+        <div style={{
+          position: "relative", overflow: "hidden",
+          borderRadius: "14px", padding: "12px 14px",
+          flexShrink: 0, boxSizing: "border-box",
+        }} className="bg-primary text-primary-foreground shadow-brand-lg">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute -top-10 -right-10 w-40 h-40 sm:w-48 sm:h-48 rounded-full border-2 border-white" />
-            <div className="absolute -bottom-6 right-16 sm:right-20 w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-white" />
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full border-2 border-white" />
+            <div className="absolute -bottom-4 right-12 w-20 h-20 rounded-full border-2 border-white" />
           </div>
-          <div className="relative flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-                <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 flex-shrink-0" />
-                <h1 className="font-display text-lg sm:text-2xl font-black leading-tight">
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <MapPin style={{ width: 18, height: 18, color: "#fbbf24", flexShrink: 0 }} />
+                <span style={{ fontWeight: 900, fontSize: "15px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Marché Immobilier
-                </h1>
+                </span>
               </div>
-              <p className="text-primary-foreground/80 text-xs sm:text-sm">
+              <p style={{ fontSize: "10px", opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 Publiez et découvrez des biens — maisons, terrains, appartements, boutiques.
               </p>
-              <p className="text-primary-foreground/60 text-xs mt-1">
+              <p style={{ fontSize: "9px", opacity: 0.6, marginTop: "2px" }}>
                 {annonces.length} annonce{annonces.length > 1 ? "s" : ""}
               </p>
             </div>
             {hasPremium && (
               <button
                 onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(!showForm); }}
-                className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 bg-white text-primary font-bold px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm hover:bg-gray-50 transition-colors shadow-sm">
-                <Plus className="w-4 h-4" />
-                <span>Publier</span>
+                style={{
+                  flexShrink: 0, display: "flex", alignItems: "center", gap: "5px",
+                  background: "#fff", color: "var(--primary)",
+                  fontWeight: 700, padding: "7px 12px",
+                  borderRadius: "10px", fontSize: "11px",
+                  border: "none", cursor: "pointer", whiteSpace: "nowrap",
+                }}>
+                <Plus style={{ width: 13, height: 13 }} /> Publier
               </button>
             )}
           </div>
         </div>
 
-        {/* ════════════════════════════
-            BANNIÈRE LIEN PROFIL (Premium)
-        ════════════════════════════ */}
+        {/* ── Bannière lien profil (Premium) ── */}
         {hasPremium && (
-          <div className="bg-gradient-to-r from-blue-50 to-violet-50 border border-blue-200 rounded-xl sm:rounded-2xl p-3 sm:p-4">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+          <div style={{
+            background: "linear-gradient(to right, #eff6ff, #f5f3ff)",
+            border: "1px solid #bfdbfe", borderRadius: "12px",
+            padding: "10px 12px", boxSizing: "border-box",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: 32, height: 32, background: "#dbeafe", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Share2 style={{ width: 14, height: 14, color: "#2563eb" }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-bold text-gray-800 text-xs sm:text-sm">
-                    🏪 Votre boutique immobilière
-                  </p>
-                  <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: "11px", color: "#1f2937" }}>🏪 Votre boutique</span>
+                  <span style={{ fontSize: "9px", background: "#3b82f6", color: "#fff", padding: "1px 6px", borderRadius: "999px" }}>
                     {mesAnnonces.length} annonce{mesAnnonces.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Partagez ce lien pour que les gens voient toutes vos annonces
-                </p>
-                <div className="flex items-center gap-2 mt-2 p-2 bg-white rounded-xl border border-blue-100">
-                  <p className="text-xs text-violet-600 font-mono truncate flex-1">
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "5px", background: "#fff", borderRadius: "8px", padding: "4px 8px", border: "1px solid #dbeafe" }}>
+                  <span style={{ fontSize: "9px", color: "#7c3aed", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
                     {monProfilUrl.replace("https://", "")}
-                  </p>
-                  <button onClick={() => {
-                    navigator.clipboard.writeText(monProfilUrl);
-                    setCopiedProfil(true);
-                    setTimeout(() => setCopiedProfil(false), 2500);
-                  }}
-                    className={`flex-shrink-0 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      copiedProfil ? "bg-green-500 text-white" : "bg-violet-600 text-white hover:bg-violet-700"
-                    }`}>
-                    {copiedProfil ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    <span className="hidden sm:inline">{copiedProfil ? "Copié !" : "Copier"}</span>
+                  </span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(monProfilUrl); setCopiedProfil(true); setTimeout(() => setCopiedProfil(false), 2500); }}
+                    style={{
+                      flexShrink: 0, display: "flex", alignItems: "center", gap: "3px",
+                      padding: "3px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700,
+                      background: copiedProfil ? "#22c55e" : "#7c3aed", color: "#fff",
+                      border: "none", cursor: "pointer", whiteSpace: "nowrap",
+                    }}>
+                    {copiedProfil ? <CheckCircle2 style={{ width: 10, height: 10 }} /> : <Copy style={{ width: 10, height: 10 }} />}
+                    {copiedProfil ? "Copié" : "Copier"}
                   </button>
                 </div>
               </div>
               <Link to={`/immobilier/vendeur/${userId}`}
-                className="flex-shrink-0 flex items-center gap-1 px-2 sm:px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold hover:bg-violet-700 transition-colors">
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Voir</span>
+                style={{
+                  flexShrink: 0, display: "flex", alignItems: "center", gap: "3px",
+                  padding: "6px 8px", borderRadius: "8px",
+                  background: "#7c3aed", color: "#fff",
+                  fontSize: "10px", fontWeight: 700, textDecoration: "none",
+                }}>
+                <ExternalLink style={{ width: 11, height: 11 }} /> Voir
               </Link>
             </div>
           </div>
         )}
 
-        {/* ════════════════════════════
-            ACCÈS PREMIUM REQUIS
-        ════════════════════════════ */}
+        {/* ── Accès Premium requis ── */}
         {!hasPremium && (
-          <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200 rounded-xl sm:rounded-2xl p-5 sm:p-6 text-center space-y-3 sm:space-y-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto">
-              <Lock className="w-6 h-6 sm:w-7 sm:h-7 text-violet-600" />
+          <div style={{
+            background: "linear-gradient(135deg, #f5f3ff, #eef2ff)",
+            border: "2px solid #c4b5fd", borderRadius: "12px",
+            padding: "16px 14px", textAlign: "center",
+            boxSizing: "border-box",
+          }}>
+            <div style={{ width: 40, height: 40, background: "#ede9fe", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+              <Lock style={{ width: 20, height: 20, color: "#7c3aed" }} />
             </div>
-            <h2 className="text-base sm:text-lg font-black text-gray-900">
+            <div style={{ fontWeight: 900, fontSize: "13px", color: "#111827", marginBottom: "6px" }}>
               Publication réservée aux membres Premium
-            </h2>
-            <p className="text-gray-500 text-xs sm:text-sm max-w-sm mx-auto">
-              Activez le Premium pour publier vos annonces et obtenir votre lien de boutique.
-              La consultation est gratuite.
+            </div>
+            <p style={{ fontSize: "10px", color: "#6b7280", marginBottom: "10px" }}>
+              Activez le Premium pour publier vos annonces. La consultation est gratuite.
             </p>
             <Link to="/abonnement"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl text-xs sm:text-sm hover:opacity-90 shadow-md">
-              <Zap className="w-4 h-4" /> Passer au Premium — 10$/mois
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "6px",
+                background: "linear-gradient(to right, #7c3aed, #4f46e5)",
+                color: "#fff", fontWeight: 700,
+                padding: "8px 16px", borderRadius: "10px",
+                fontSize: "11px", textDecoration: "none",
+              }}>
+              <Zap style={{ width: 12, height: 12 }} /> Passer au Premium — 10$/mois
             </Link>
           </div>
         )}
 
-        {/* ════════════════════════════
-            FORMULAIRE PUBLICATION
-        ════════════════════════════ */}
+        {/* ── Formulaire publication ── */}
         {showForm && hasPremium && (
-          <div className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between">
-              <h2 className="font-black text-gray-800 text-sm sm:text-base flex items-center gap-2">
-                <Home className="w-4 h-4 sm:w-5 sm:h-5 text-violet-600" />
+          <div style={{
+            background: "#fff", border: "1px solid #e5e7eb",
+            borderRadius: "14px", overflow: "hidden",
+            boxSizing: "border-box",
+          }}>
+            <div style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontWeight: 900, fontSize: "13px", color: "#111827", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Home style={{ width: 14, height: 14, color: "#7c3aed" }} />
                 {editingId ? "Modifier l'annonce" : "Publier une annonce"}
-              </h2>
+              </span>
               <button onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }}
-                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300">
-                <X className="w-4 h-4" />
+                style={{ width: 28, height: 28, borderRadius: "999px", background: "#e5e7eb", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X style={{ width: 13, height: 13 }} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
+            <form onSubmit={handleSubmit} style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "10px" }}>
 
-              {/* Type de bien */}
+              {/* Type */}
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
-                  Type de bien *
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>Type de bien *</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                   {TYPES.map(t => (
                     <button key={t.value} type="button"
                       onClick={() => setForm({ ...form, type: t.value })}
-                      className={`py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium border-2 transition-all ${
-                        form.type === t.value
-                          ? "border-violet-500 bg-violet-50 text-violet-700"
-                          : "border-gray-200 text-gray-600 hover:border-violet-200"
-                      }`}>
-                      <div className="text-lg sm:text-xl mb-1">{t.emoji}</div>
+                      style={{
+                        padding: "8px 6px", borderRadius: "10px",
+                        fontSize: "11px", fontWeight: 500,
+                        border: form.type === t.value ? "2px solid #7c3aed" : "2px solid #e5e7eb",
+                        background: form.type === t.value ? "#f5f3ff" : "#fff",
+                        color: form.type === t.value ? "#7c3aed" : "#4b5563",
+                        cursor: "pointer", textAlign: "center",
+                      }}>
+                      <div style={{ fontSize: "16px", marginBottom: "2px" }}>{t.emoji}</div>
                       {t.label}
                     </button>
                   ))}
@@ -544,69 +608,70 @@ export default function ImmobilierPage() {
 
               {/* Titre */}
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">Titre *</label>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>Titre *</label>
                 <Input value={form.titre} onChange={e => setForm({ ...form, titre: e.target.value })}
-                  placeholder="Ex: Belle villa 4 chambres avec jardin"
-                  className="text-sm" />
+                  placeholder="Ex: Belle villa 4 chambres" style={{ fontSize: "12px", height: "36px" }} />
               </div>
 
               {/* Description */}
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">Description</label>
-                <textarea value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })}
-                  placeholder="Décrivez votre bien en détail..."
-                  className="w-full h-24 sm:h-28 px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-violet-400" />
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>Description</label>
+                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                  placeholder="Décrivez votre bien..."
+                  style={{ width: "100%", height: "80px", padding: "8px 10px", borderRadius: "10px", border: "1px solid #e5e7eb", fontSize: "12px", resize: "none", outline: "none", boxSizing: "border-box" }} />
               </div>
 
               {/* Prix */}
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">Prix ($) *</label>
-                <Input type="number" value={form.prix}
-                  onChange={e => setForm({ ...form, prix: e.target.value })}
-                  placeholder="Ex: 25000" className="text-sm" />
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>Prix ($) *</label>
+                <Input type="number" value={form.prix} onChange={e => setForm({ ...form, prix: e.target.value })}
+                  placeholder="Ex: 25000" style={{ fontSize: "12px", height: "36px" }} />
               </div>
 
               {/* Localisation */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">Ville *</label>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>Ville *</label>
                   <Input value={form.ville} onChange={e => setForm({ ...form, ville: e.target.value })}
-                    placeholder="Ex: Cotonou" className="text-sm" />
+                    placeholder="Cotonou" style={{ fontSize: "12px", height: "36px" }} />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">Quartier</label>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>Quartier</label>
                   <Input value={form.quartier} onChange={e => setForm({ ...form, quartier: e.target.value })}
-                    placeholder="Ex: Cadjehoun" className="text-sm" />
+                    placeholder="Cadjehoun" style={{ fontSize: "12px", height: "36px" }} />
                 </div>
               </div>
 
               {/* Contact */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">Téléphone *</label>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>Téléphone *</label>
                   <Input value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })}
-                    placeholder="+229..." className="text-sm" />
+                    placeholder="+229..." style={{ fontSize: "12px", height: "36px" }} />
                 </div>
                 <div>
-                  <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-1 block">WhatsApp</label>
+                  <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "4px" }}>WhatsApp</label>
                   <Input value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
-                    placeholder="+229..." className="text-sm" />
+                    placeholder="+229..." style={{ fontSize: "12px", height: "36px" }} />
                 </div>
               </div>
 
               {/* Statut */}
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">Statut</label>
-                <div className="flex gap-2">
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>Statut</label>
+                <div style={{ display: "flex", gap: "6px" }}>
                   {STATUTS.map(s => (
                     <button key={s.value} type="button"
                       onClick={() => setForm({ ...form, statut: s.value })}
-                      className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold border-2 transition-all ${
-                        form.statut === s.value
-                          ? `border-transparent text-white ${s.color}`
-                          : "border-gray-200 text-gray-500 bg-white"
-                      }`}>
+                      style={{
+                        flex: 1, padding: "7px", borderRadius: "10px",
+                        fontSize: "10px", fontWeight: 600, cursor: "pointer",
+                        border: form.statut === s.value ? "2px solid transparent" : "2px solid #e5e7eb",
+                        background: form.statut === s.value
+                          ? s.value === "disponible" ? "#22c55e" : s.value === "vendu" ? "#ef4444" : "#eab308"
+                          : "#fff",
+                        color: form.statut === s.value ? "#fff" : "#6b7280",
+                      }}>
                       {s.label}
                     </button>
                   ))}
@@ -615,49 +680,60 @@ export default function ImmobilierPage() {
 
               {/* Photos */}
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block">
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>
                   Photos ({form.images.length}/6)
                 </label>
                 {form.images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", marginBottom: "8px" }}>
                     {form.images.map((url, i) => (
-                      <div key={i} className="relative aspect-square">
-                        <img src={url} alt="" className="w-full h-full object-cover rounded-xl" />
-                        {i === 0 && (
-                          <span className="absolute bottom-1 left-1 bg-violet-600 text-white text-xs px-1 py-0.5 rounded-full">
-                            ⭐
-                          </span>
-                        )}
+                      <div key={i} style={{ position: "relative", aspectRatio: "1" }}>
+                        <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }} />
+                        {i === 0 && <span style={{ position: "absolute", bottom: 3, left: 3, background: "#7c3aed", color: "#fff", fontSize: "8px", padding: "1px 4px", borderRadius: "999px" }}>⭐</span>}
                         <button type="button"
                           onClick={() => setForm(prev => ({ ...prev, images: prev.images.filter((_, j) => j !== i) }))}
-                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow text-xs">
+                          style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "999px", background: "#ef4444", color: "#fff", border: "none", cursor: "pointer", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           ×
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
-                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
-                  onChange={handlePhotoUpload} />
-                <button type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+                <button type="button" onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingPhoto || form.images.length >= 6}
-                  className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 hover:border-violet-400 hover:text-violet-600 transition-colors disabled:opacity-50">
-                  <Image className="w-4 h-4" />
+                  style={{
+                    width: "100%", padding: "10px", borderRadius: "10px",
+                    border: "2px dashed #d1d5db", background: "#fff",
+                    color: "#6b7280", fontSize: "11px", fontWeight: 500,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                    cursor: "pointer", boxSizing: "border-box",
+                  }}>
+                  <Image style={{ width: 14, height: 14 }} />
                   {uploadingPhoto ? "Upload en cours..." : "Ajouter des photos"}
                 </button>
               </div>
 
-              {/* Boutons */}
-              <div className="flex gap-2 sm:gap-3 pt-2">
+              {/* Boutons submit */}
+              <div style={{ display: "flex", gap: "8px", paddingTop: "4px" }}>
                 <button type="button"
                   onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }}
-                  className="flex-1 py-2.5 sm:py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 text-xs sm:text-sm">
+                  style={{
+                    flex: 1, padding: "10px", borderRadius: "10px",
+                    border: "1px solid #e5e7eb", background: "#fff",
+                    color: "#4b5563", fontSize: "11px", fontWeight: 600, cursor: "pointer",
+                  }}>
                   Annuler
                 </button>
                 <button type="submit" disabled={saving}
-                  className="flex-1 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 shadow-md">
-                  {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  style={{
+                    flex: 1, padding: "10px", borderRadius: "10px",
+                    background: "linear-gradient(to right, #7c3aed, #4f46e5)",
+                    color: "#fff", fontSize: "11px", fontWeight: 700,
+                    border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                    opacity: saving ? 0.6 : 1,
+                  }}>
+                  {saving && <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "999px", animation: "spin 0.8s linear infinite" }} />}
                   {saving ? "Publication..." : editingId ? "✅ Modifier" : "✅ Publier"}
                 </button>
               </div>
@@ -665,44 +741,58 @@ export default function ImmobilierPage() {
           </div>
         )}
 
-        {/* ════════════════════════════
-            RECHERCHE & FILTRES
-        ════════════════════════════ */}
-        <div className="space-y-2 sm:space-y-3">
+        {/* ── Recherche & Filtres ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", boxSizing: "border-box" }}>
 
-          {/* Barre recherche + bouton filtres */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+          <div style={{ display: "flex", gap: "6px" }}>
+            <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+              <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 12, height: 12, color: "#9ca3af" }} />
               <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
                 placeholder="Rechercher..."
-                className="w-full pl-8 sm:pl-9 pr-3 sm:pr-4 h-9 sm:h-10 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm focus:outline-none focus:border-violet-400 transition-colors" />
+                style={{
+                  width: "100%", paddingLeft: "28px", paddingRight: "10px",
+                  height: "34px", borderRadius: "10px",
+                  border: "1px solid #e5e7eb", background: "#fff",
+                  fontSize: "11px", outline: "none", boxSizing: "border-box",
+                }} />
             </div>
             <button onClick={() => setShowFiltres(!showFiltres)}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 h-9 sm:h-10 rounded-xl text-xs sm:text-sm font-semibold border transition-colors flex-shrink-0 ${
-                hasFilters
-                  ? "bg-violet-600 text-white border-violet-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
-              }`}>
-              <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Filtres</span>
-              {hasFilters && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white" />}
+              style={{
+                display: "flex", alignItems: "center", gap: "4px",
+                padding: "0 10px", height: "34px", borderRadius: "10px",
+                fontSize: "11px", fontWeight: 600, flexShrink: 0,
+                border: hasFilters ? "none" : "1px solid #e5e7eb",
+                background: hasFilters ? "#7c3aed" : "#fff",
+                color: hasFilters ? "#fff" : "#4b5563",
+                cursor: "pointer",
+              }}>
+              <Filter style={{ width: 12, height: 12 }} />
+              Filtres
+              {hasFilters && <span style={{ width: 6, height: 6, borderRadius: "999px", background: "#fff", display: "inline-block" }} />}
             </button>
           </div>
 
-          {/* Types rapides — scroll horizontal sur mobile */}
-          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-0">
+          {/* Types rapides */}
+          <div style={{ display: "flex", gap: "5px", overflowX: "auto", paddingBottom: "2px" }}>
             <button onClick={() => setFilterType("")}
-              className={`flex-shrink-0 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                !filterType ? "bg-violet-600 text-white border-violet-600" : "bg-white text-gray-600 border-gray-200"
-              }`}>
+              style={{
+                flexShrink: 0, padding: "4px 10px", borderRadius: "999px",
+                fontSize: "10px", fontWeight: 600, cursor: "pointer",
+                border: !filterType ? "none" : "1px solid #e5e7eb",
+                background: !filterType ? "#7c3aed" : "#fff",
+                color: !filterType ? "#fff" : "#4b5563",
+              }}>
               🏘️ Tout ({annonces.length})
             </button>
             {TYPES.map(t => (
               <button key={t.value} onClick={() => setFilterType(filterType === t.value ? "" : t.value)}
-                className={`flex-shrink-0 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                  filterType === t.value ? "bg-violet-600 text-white border-violet-600" : "bg-white text-gray-600 border-gray-200"
-                }`}>
+                style={{
+                  flexShrink: 0, padding: "4px 10px", borderRadius: "999px",
+                  fontSize: "10px", fontWeight: 600, cursor: "pointer",
+                  border: filterType === t.value ? "none" : "1px solid #e5e7eb",
+                  background: filterType === t.value ? "#7c3aed" : "#fff",
+                  color: filterType === t.value ? "#fff" : "#4b5563",
+                }}>
                 {t.emoji} {t.label}
               </button>
             ))}
@@ -710,73 +800,75 @@ export default function ImmobilierPage() {
 
           {/* Filtres avancés */}
           {showFiltres && (
-            <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Ville</label>
-                <Input value={filterVille} onChange={e => setFilterVille(e.target.value)}
-                  placeholder="Ex: Cotonou" className="h-8 sm:h-9 text-xs sm:text-sm" />
+            <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #e5e7eb", padding: "10px 12px", display: "flex", flexDirection: "column", gap: "8px", boxSizing: "border-box" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div>
+                  <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7280", display: "block", marginBottom: "3px" }}>Ville</label>
+                  <Input value={filterVille} onChange={e => setFilterVille(e.target.value)}
+                    placeholder="Cotonou" style={{ height: "32px", fontSize: "11px" }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7280", display: "block", marginBottom: "3px" }}>Prix max ($)</label>
+                  <Input type="number" value={filterPrixMax} onChange={e => setFilterPrixMax(e.target.value)}
+                    placeholder="50000" style={{ height: "32px", fontSize: "11px" }} />
+                </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Prix max ($)</label>
-                <Input type="number" value={filterPrixMax} onChange={e => setFilterPrixMax(e.target.value)}
-                  placeholder="Ex: 50000" className="h-8 sm:h-9 text-xs sm:text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Statut</label>
+                <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7280", display: "block", marginBottom: "3px" }}>Statut</label>
                 <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as Statut | "")}
-                  className="w-full h-8 sm:h-9 px-2 sm:px-3 rounded-xl border border-gray-200 text-xs sm:text-sm focus:outline-none focus:border-violet-400 bg-white">
+                  style={{ width: "100%", height: "32px", padding: "0 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "11px", background: "#fff", boxSizing: "border-box" }}>
                   <option value="">Tous</option>
                   {STATUTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
               {hasFilters && (
-                <button
-                  onClick={() => { setFilterType(""); setFilterVille(""); setFilterPrixMax(""); setFilterStatut(""); }}
-                  className="sm:col-span-3 py-2 rounded-xl border border-red-200 text-red-500 text-xs font-semibold hover:bg-red-50">
-                  ✕ Réinitialiser les filtres
+                <button onClick={() => { setFilterType(""); setFilterVille(""); setFilterPrixMax(""); setFilterStatut(""); }}
+                  style={{ padding: "7px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fff", color: "#ef4444", fontSize: "10px", fontWeight: 600, cursor: "pointer" }}>
+                  ✕ Réinitialiser
                 </button>
               )}
             </div>
           )}
         </div>
 
-        {/* ════════════════════════════
-            LISTE ANNONCES
-        ════════════════════════════ */}
+        {/* ── Liste annonces ── */}
         {loading ? (
-          // Skeleton — 1 col mobile, 2 col tablette, 3 col desktop
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 animate-pulse">
-                <div className="h-44 sm:h-48 bg-gray-200" />
-                <div className="p-3 sm:p-4 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} style={{ background: "#fff", borderRadius: "14px", overflow: "hidden", border: "1px solid #f1f5f9" }}>
+                <div style={{ height: "140px", background: "#e5e7eb", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ height: "10px", background: "#e5e7eb", borderRadius: "4px", width: "75%" }} />
+                  <div style={{ height: "10px", background: "#e5e7eb", borderRadius: "4px", width: "50%" }} />
+                  <div style={{ height: "12px", background: "#e5e7eb", borderRadius: "4px", width: "40%" }} />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 sm:py-16 bg-white rounded-2xl border border-gray-100">
-            <p className="text-4xl sm:text-5xl mb-3">🏘️</p>
-            <p className="font-bold text-gray-700 text-base sm:text-lg">
+          <div style={{ textAlign: "center", padding: "40px 20px", background: "#fff", borderRadius: "14px", border: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: "36px", marginBottom: "8px" }}>🏘️</div>
+            <div style={{ fontWeight: 700, fontSize: "13px", color: "#374151" }}>
               {annonces.length === 0 ? "Aucune annonce publiée" : "Aucun résultat"}
-            </p>
-            <p className="text-gray-400 text-xs sm:text-sm mt-1">
+            </div>
+            <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "4px" }}>
               {annonces.length === 0
                 ? hasPremium ? "Soyez le premier à publier !" : "Les annonces apparaîtront ici."
                 : "Essayez de modifier vos filtres."
               }
-            </p>
+            </div>
           </div>
         ) : (
           <>
-            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+            <p style={{ fontSize: "10px", color: "#6b7280", fontWeight: 500 }}>
               {filtered.length} annonce{filtered.length > 1 ? "s" : ""} trouvée{filtered.length > 1 ? "s" : ""}
             </p>
-            {/* Grille : 1 col mobile, 2 col tablette, 3 col desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {/* Grille : 1 col mobile, 2 col si plus large */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+              gap: "10px",
+            }}>
               {filtered.map(annonce => (
                 <AnnonceCard
                   key={annonce.id}
