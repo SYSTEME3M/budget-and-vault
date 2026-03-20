@@ -41,14 +41,13 @@ import AbonnementPage from "@/pages/AbonnementPage";
 
 import NotFound from "@/pages/NotFound";
 
-// Mur premium — redirige vers /abonnement si non premium
 import AppLayout from "@/components/AppLayout";
 import { Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
-// ── Page protégée (authentification requise)
+// ── Page protégée (authentification requise, gratuit + premium)
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
     <PageLoader duration={1500}>{children}</PageLoader>
@@ -62,7 +61,7 @@ const AdminPage = ({ children }: { children: React.ReactNode }) => (
   </NexoraAuthGuard>
 );
 
-// ── Mur premium inline
+// ── Mur premium (affiché quand non premium tente d'accéder à une route 100% premium)
 function PremiumWall() {
   const navigate = useNavigate();
   return (
@@ -95,7 +94,7 @@ function PremiumWall() {
   );
 }
 
-// ── Page protégée ET premium requis
+// ── Page 100% premium (accès bloqué si non premium)
 const PremiumPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
     <PageLoader duration={1500}>
@@ -116,37 +115,41 @@ const App = () => (
           <Route path="/login" element={<NexoraLoginPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* ── DASHBOARD & FINANCE (protégé) ── */}
-          <Route path="/dashboard"         element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
-          <Route path="/historique"        element={<ProtectedPage><HistoriquePage /></ProtectedPage>} />
-          <Route path="/coffre-fort"       element={<ProtectedPage><CoffreFortPage /></ProtectedPage>} />
-          <Route path="/liens"             element={<ProtectedPage><LiensPage /></ProtectedPage>} />
-          <Route path="/profil"            element={<ProtectedPage><ProfilPage /></ProtectedPage>} />
-          <Route path="/abonnement"        element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
-          <Route path="/factures"          element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
+          {/* ── GRATUIT + PREMIUM (accessible à tous les connectés) ── */}
+          <Route path="/dashboard"        element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
+          <Route path="/historique"       element={<ProtectedPage><HistoriquePage /></ProtectedPage>} />
+          <Route path="/coffre-fort"      element={<ProtectedPage><CoffreFortPage /></ProtectedPage>} />
+          <Route path="/liens"            element={<ProtectedPage><LiensPage /></ProtectedPage>} />
+          <Route path="/profil"           element={<ProtectedPage><ProfilPage /></ProtectedPage>} />
+          <Route path="/abonnement"       element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
 
-          {/* ── PREMIUM UNIQUEMENT ── */}
-          <Route path="/entrees-depenses"  element={<PremiumPage><EntreesDepensesPage /></PremiumPage>} />
-          <Route path="/entrees"           element={<Navigate to="/entrees-depenses" replace />} />
-          <Route path="/depenses"          element={<Navigate to="/entrees-depenses" replace />} />
-          <Route path="/prets"             element={<PremiumPage><PretsPage /></PremiumPage>} />
-          <Route path="/investissements"   element={<PremiumPage><InvestissementsPage /></PremiumPage>} />
-          <Route path="/immobilier"        element={<PremiumPage><ImmobilierPage /></PremiumPage>} />
+          {/* ── LIMITÉ gratuit / illimité premium (quota géré dans la page) ── */}
+          {/* Factures     : 10 max gratuit, illimité premium                  */}
+          <Route path="/factures"         element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
+          {/* Prêts/Dettes : 5 prêts + 5 dettes max gratuit                   */}
+          <Route path="/prets"            element={<ProtectedPage><PretsPage /></ProtectedPage>} />
+          {/* Entrées/Dép. : 5 entrées + 5 dépenses max gratuit               */}
+          <Route path="/entrees-depenses" element={<ProtectedPage><EntreesDepensesPage /></ProtectedPage>} />
+          <Route path="/entrees"          element={<Navigate to="/entrees-depenses" replace />} />
+          <Route path="/depenses"         element={<Navigate to="/entrees-depenses" replace />} />
+          {/* Investissements : accessible à tous, sans limite                 */}
+          <Route path="/investissements"  element={<ProtectedPage><InvestissementsPage /></ProtectedPage>} />
 
-          {/* ── BOUTIQUE (Premium uniquement) ── */}
-          <Route path="/boutique"              element={<PremiumPage><BoutiqueAccueilPage /></PremiumPage>} />
-          <Route path="/boutique/produits"     element={<PremiumPage><BoutiqueProduitsPage /></PremiumPage>} />
-          <Route path="/boutique/commandes"    element={<PremiumPage><CommandesPage /></PremiumPage>} />
-          <Route path="/boutique/parametres"   element={<PremiumPage><BoutiqueParametresPage /></PremiumPage>} />
+          {/* ── 100% PREMIUM (bloqué si non premium) ── */}
+          <Route path="/immobilier"           element={<PremiumPage><ImmobilierPage /></PremiumPage>} />
+          <Route path="/boutique"             element={<PremiumPage><BoutiqueAccueilPage /></PremiumPage>} />
+          <Route path="/boutique/produits"    element={<PremiumPage><BoutiqueProduitsPage /></PremiumPage>} />
+          <Route path="/boutique/commandes"   element={<PremiumPage><CommandesPage /></PremiumPage>} />
+          <Route path="/boutique/parametres"  element={<PremiumPage><BoutiqueParametresPage /></PremiumPage>} />
 
-          {/* ── VITRINE PUBLIQUE (pas de protection) ── */}
-          <Route path="/shop/:slug"                      element={<BoutiqueVitrinePage />} />
-          <Route path="/shop/:slug/produit/:produitId"   element={<ProduitDetailPage />} />
+          {/* ── VITRINE PUBLIQUE (aucune protection) ── */}
+          <Route path="/shop/:slug"                    element={<BoutiqueVitrinePage />} />
+          <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
           {/* ── PROFIL VENDEUR (public) ── */}
           <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
 
-          {/* ── MÉDIAS (Admin seulement) ── */}
+          {/* ── MÉDIAS (admin seulement) ── */}
           <Route path="/medias" element={<AdminPage><MediasPage /></AdminPage>} />
 
           {/* ── 404 ── */}
