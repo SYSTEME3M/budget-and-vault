@@ -6,7 +6,7 @@ interface PageLoaderProps {
   children: React.ReactNode;
 }
 
-export default function PageLoader({ duration = 1000, children }: PageLoaderProps) {
+export default function PageLoader({ duration = 600, children }: PageLoaderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,7 +29,6 @@ export default function PageLoader({ duration = 1000, children }: PageLoaderProp
           }
         `}</style>
 
-        {/* Logo + Nom */}
         <div className="flex flex-col items-center gap-6">
           <img
             src={nexoraLogo}
@@ -47,7 +46,6 @@ export default function PageLoader({ duration = 1000, children }: PageLoaderProp
           </div>
         </div>
 
-        {/* Points animés vers le bas */}
         <div className="flex items-center gap-4">
           {[0, 1, 2].map((i) => (
             <div
