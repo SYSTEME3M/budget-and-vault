@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { hashPassword } from "@/lib/nexora-auth";
 import { playSuccessSound } from "@/lib/app-utils";
@@ -6,60 +6,61 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { User, Key, Camera, Save, Mail, AtSign, BadgeCheck, Crown, Zap } from "lucide-react";
-import { getNexoraUser, isNexoraAuthenticated } from "@/lib/nexora-auth";
+import {
+  User, Key, Save, Mail, AtSign,
+  BadgeCheck, Crown, Zap, Lock, CheckCircle2, X
+} from "lucide-react";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { Link } from "react-router-dom";
-import nexoraLogo from "@/assets/nexora-logo.png";
+
+const PLATFORM_LOGO = "https://i.postimg.cc/c1QgbZsG/ei_1773937801458_removebg_preview.png";
 
 export default function ProfilPage() {
   const nexoraUser = getNexoraUser();
   const [nom, setNom] = useState(nexoraUser?.nom_prenom || "");
   const [email, setEmail] = useState(nexoraUser?.email || "");
-  const [avatarUrl, setAvatarUrl] = useState(nexoraUser?.avatar_url || "");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
-  const hasBadge = nexoraUser?.badge_premium || nexoraUser?.is_admin;
-  const isPremium = nexoraUser?.plan === "premium" || nexoraUser?.plan === "admin";
+  const isAdmin = nexoraUser?.is_admin;
+  const isPremium = nexoraUser?.plan === "premium" || isAdmin;
+  const hasBadge = isPremium || isAdmin;
 
+  // ── Sauvegarder profil
   const handleSaveProfile = async () => {
     if (!nexoraUser) return;
     setSaving(true);
     const { error } = await supabase
       .from("nexora_users" as any)
-      .update({ nom_prenom: nom, email, avatar_url: avatarUrl || null })
+      .update({ nom_prenom: nom, email })
       .eq("id", nexoraUser.id);
     setSaving(false);
-    if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); return; }
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
     playSuccessSound();
     toast({ title: "Profil mis à jour !" });
-    // Update local storage
-    const stored = localStorage.getItem("nexora_current_user") || sessionStorage.getItem("nexora_current_user");
+
+    // Mettre à jour le localStorage
+    const stored =
+      localStorage.getItem("nexora_current_user") ||
+      sessionStorage.getItem("nexora_current_user");
     if (stored) {
       const user = JSON.parse(stored);
-      const updated = { ...user, nom_prenom: nom, email, avatar_url: avatarUrl || null };
-      if (localStorage.getItem("nexora_current_user")) localStorage.setItem("nexora_current_user", JSON.stringify(updated));
-      else sessionStorage.setItem("nexora_current_user", JSON.stringify(updated));
+      const updated = { ...user, nom_prenom: nom, email };
+      if (localStorage.getItem("nexora_current_user")) {
+        localStorage.setItem("nexora_current_user", JSON.stringify(updated));
+      } else {
+        sessionStorage.setItem("nexora_current_user", JSON.stringify(updated));
+      }
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const path = `avatars/${nexoraUser?.id}-${Date.now()}.${file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("mes-secrets-media").upload(path, file, { upsert: true });
-    if (error) { toast({ title: "Erreur upload", variant: "destructive" }); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from("mes-secrets-media").getPublicUrl(path);
-    setAvatarUrl(publicUrl);
-    setUploading(false);
-    toast({ title: "Photo téléversée !" });
-  };
-
+  // ── Changer mot de passe
   const handleChangePassword = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       toast({ title: "Remplissez tous les champs", variant: "destructive" }); return;
@@ -71,6 +72,7 @@ export default function ProfilPage() {
       toast({ title: "Minimum 8 caractères", variant: "destructive" }); return;
     }
     if (!nexoraUser) return;
+
     const oldHash = await hashPassword(oldPassword);
     const { data: check } = await supabase
       .from("nexora_users" as any)
@@ -78,123 +80,257 @@ export default function ProfilPage() {
       .eq("id", nexoraUser.id)
       .eq("password_hash", oldHash)
       .maybeSingle();
-    if (!check) { toast({ title: "Ancien mot de passe incorrect", variant: "destructive" }); return; }
+
+    if (!check) {
+      toast({ title: "Ancien mot de passe incorrect", variant: "destructive" }); return;
+    }
+
     const newHash = await hashPassword(newPassword);
-    await supabase.from("nexora_users" as any).update({ password_hash: newHash }).eq("id", nexoraUser.id);
+    await supabase
+      .from("nexora_users" as any)
+      .update({ password_hash: newHash })
+      .eq("id", nexoraUser.id);
+
     playSuccessSound();
     toast({ title: "Mot de passe modifié !" });
     setOldPassword(""); setNewPassword(""); setConfirmPassword("");
   };
 
-  const avatarDisplay = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nom)}&background=1a56db&color=fff&size=128`;
-
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in-up">
+      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in-up pb-10">
+
         <h1 className="font-display font-bold text-xl flex items-center gap-2">
           <User className="w-6 h-6 text-primary" /> Mon Profil
         </h1>
 
-        {/* Carte profil */}
+        {/* ════════════════════════════
+            CARTE PROFIL
+        ════════════════════════════ */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-5">
+
+          {/* Avatar + infos */}
           <div className="flex items-center gap-5">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-brand">
-                <img src={avatarDisplay} alt="Avatar" className="w-full h-full object-cover" />
+
+            {/* ── Avatar fixe — logo plateforme ── */}
+            <div className="relative flex-shrink-0">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary shadow-brand bg-white flex items-center justify-center">
+                <img
+                  src={PLATFORM_LOGO}
+                  alt="Logo Nexora"
+                  className="w-16 h-16 object-contain"
+                />
               </div>
-              <label htmlFor="avatar-upload"
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-accent rounded-full flex items-center justify-center cursor-pointer hover:bg-accent-light transition-colors shadow-sm border-2 border-card">
-                <Camera className="w-4 h-4 text-accent-foreground" />
-              </label>
-              <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+
+              {/* Badge bleu rond style Facebook */}
+              {hasBadge && (
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white shadow-md"
+                  title={isAdmin ? "Administrateur" : "Compte Premium"}>
+                  <BadgeCheck className="w-4 h-4 text-white fill-white" />
+                </div>
+              )}
             </div>
-            <div>
-              <div className="font-display font-bold text-lg flex items-center gap-2">
-                {nom}
-                {hasBadge && <BadgeCheck className="w-5 h-5 text-primary" />}
+
+            {/* Infos utilisateur */}
+            <div className="flex-1 min-w-0">
+              <div className="font-display font-bold text-lg flex items-center gap-2 flex-wrap">
+                <span className="truncate">{nom || "Utilisateur"}</span>
+                {/* Badge bleu inline style Facebook */}
+                {hasBadge && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-500 rounded-full flex-shrink-0"
+                    title={isAdmin ? "Administrateur" : "Premium"}>
+                    <BadgeCheck className="w-3 h-3 text-white" />
+                  </span>
+                )}
               </div>
+
               <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                <Mail className="w-3.5 h-3.5" /> {email}
+                <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{email}</span>
               </div>
-              <div className="flex gap-2 mt-1.5 flex-wrap">
-                {nexoraUser?.is_admin && (
-                  <span className="text-xs bg-primary-bg text-primary font-semibold px-2 py-0.5 rounded-full border border-primary/20 flex items-center gap-1">
+
+              {/* Badges de statut */}
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {isAdmin && (
+                  <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1">
                     <Crown className="w-3 h-3" /> Administrateur
                   </span>
                 )}
-                {isPremium && (
-                  <span className="text-xs bg-yellow-50 text-yellow-700 font-semibold px-2 py-0.5 rounded-full border border-yellow-200 flex items-center gap-1">
-                    <BadgeCheck className="w-3 h-3" /> Badge Premium ✓
+                {isPremium && !isAdmin && (
+                  <span className="text-xs bg-blue-500 text-white font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <BadgeCheck className="w-3 h-3" /> Premium
                   </span>
                 )}
-                {!isPremium && (
-                  <span className="text-xs bg-muted text-muted-foreground font-semibold px-2 py-0.5 rounded-full border border-border">
+                {!isPremium && !isAdmin && (
+                  <span className="text-xs bg-gray-100 text-gray-500 font-semibold px-2.5 py-1 rounded-full border border-gray-200">
                     Plan Gratuit
                   </span>
                 )}
               </div>
-              {uploading && <div className="text-xs text-primary mt-1 animate-pulse">Téléversement...</div>}
             </div>
+          </div>
+
+          {/* Note photo bloquée */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-2">
+            <Lock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <p className="text-xs text-gray-500">
+              La photo de profil est le logo officiel de la plateforme Nexora et ne peut pas être modifiée.
+            </p>
           </div>
 
           <div className="h-px bg-border" />
 
+          {/* Formulaire infos */}
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <AtSign className="w-4 h-4" /> Nom complet
               </label>
-              <Input value={nom} onChange={e => setNom(e.target.value)} placeholder="Votre nom" />
+              <Input
+                value={nom}
+                onChange={e => setNom(e.target.value)}
+                placeholder="Votre nom complet"
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <Mail className="w-4 h-4" /> Email
               </label>
-              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="votre@email.com" />
+              <Input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="votre@email.com"
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                <Camera className="w-4 h-4" /> URL photo de profil
-              </label>
-              <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." />
-            </div>
-            <Button onClick={handleSaveProfile} disabled={saving} className="w-full bg-primary text-primary-foreground gap-2">
-              <Save className="w-4 h-4" /> {saving ? "Enregistrement..." : "Sauvegarder le profil"}
+            <Button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="w-full bg-primary text-primary-foreground gap-2">
+              <Save className="w-4 h-4" />
+              {saving ? "Enregistrement..." : "Sauvegarder le profil"}
             </Button>
           </div>
         </div>
 
-        {/* Abonnement */}
+        {/* ════════════════════════════
+            FONCTIONNALITÉS DISPONIBLES
+        ════════════════════════════ */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <h2 className="font-display font-bold flex items-center gap-2 text-base">
+            <User className="w-5 h-5 text-primary" /> Mes fonctionnalités
+          </h2>
+
+          <div className="space-y-2">
+            {[
+              { label: "Factures", detail: isPremium ? "Illimité" : "5 max", ok: true },
+              { label: "Coffre-fort", detail: isPremium ? "Illimité" : "10 comptes max", ok: true },
+              { label: "Liens & Contacts", detail: "Illimité", ok: true },
+              { label: "Tableau de bord", detail: "Disponible", ok: true },
+              { label: "Historique", detail: "Disponible", ok: true },
+              { label: "Boutique", detail: isPremium ? "Disponible" : "Premium uniquement", ok: isPremium },
+              { label: "Entrées & Dépenses", detail: isPremium ? "Illimité" : "Premium uniquement", ok: isPremium },
+              { label: "Investissements", detail: isPremium ? "Illimité" : "Premium uniquement", ok: isPremium },
+              { label: "Prêts & Dettes", detail: isPremium ? "Illimité" : "Premium uniquement", ok: isPremium },
+              { label: "Médias", detail: isPremium ? "Illimité" : "Premium uniquement", ok: isPremium },
+              { label: "🏠 Marché Immobilier", detail: isPremium ? "Publication disponible" : "Premium uniquement", ok: isPremium },
+            ].map((f) => (
+              <div key={f.label}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm ${
+                  f.ok
+                    ? "bg-green-50 border border-green-100"
+                    : "bg-gray-50 border border-gray-100 opacity-60"
+                }`}>
+                <div className="flex items-center gap-2">
+                  {f.ok
+                    ? <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    : <X className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  }
+                  <span className={`font-medium ${f.ok ? "text-gray-700" : "text-gray-400 line-through"}`}>
+                    {f.label}
+                  </span>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  f.ok
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-200 text-gray-500"
+                }`}>
+                  {f.detail}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ════════════════════════════
+            BANNIÈRE UPGRADE (si gratuit)
+        ════════════════════════════ */}
         {!isPremium && (
-          <div className="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-5 text-primary-foreground flex items-center gap-4">
-            <Zap className="w-10 h-10 text-accent flex-shrink-0" />
+          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-5 text-white flex items-center gap-4">
+            <Zap className="w-10 h-10 text-yellow-300 flex-shrink-0" />
             <div className="flex-1">
-              <div className="font-bold">Passez au Premium</div>
-              <div className="text-sm text-primary-foreground/80">Toutes les fonctionnalités + Badge ✓ sur votre profil</div>
+              <div className="font-black text-base">Passez au Premium</div>
+              <div className="text-sm text-white/80 mt-0.5">
+                Toutes les fonctionnalités illimitées + Badge bleu ✓ sur votre profil
+              </div>
             </div>
-            <Link to="/abonnement" className="bg-accent text-accent-foreground font-bold text-sm px-4 py-2 rounded-lg flex-shrink-0">
+            <Link
+              to="/abonnement"
+              className="bg-white text-violet-700 font-bold text-sm px-4 py-2 rounded-lg flex-shrink-0 hover:bg-gray-100 transition-colors">
               Voir les plans
             </Link>
           </div>
         )}
 
-        {/* Changer mot de passe */}
+        {/* ════════════════════════════
+            CHANGER MOT DE PASSE
+        ════════════════════════════ */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <div>
             <h2 className="font-display font-bold flex items-center gap-2 text-base">
               <Key className="w-5 h-5 text-primary" /> Changer le mot de passe
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">Haché avec SHA-256 + sel sécurisé.</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Minimum 8 caractères avec lettre, chiffre et caractère spécial.
+            </p>
           </div>
           <div className="space-y-3">
-            <Input type="password" placeholder="Ancien mot de passe" value={oldPassword} onChange={e => setOldPassword(e.target.value)} />
-            <Input type="password" placeholder="Nouveau mot de passe (min 8 car.)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-            <Input type="password" placeholder="Confirmer le nouveau mot de passe" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-            <Button onClick={handleChangePassword} className="w-full bg-primary text-primary-foreground gap-2">
+            <Input
+              type="password"
+              placeholder="Ancien mot de passe"
+              value={oldPassword}
+              onChange={e => setOldPassword(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="Nouveau mot de passe (min 8 car.)"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="Confirmer le nouveau mot de passe"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+            />
+            {newPassword && confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <X className="w-3 h-3" /> Les mots de passe ne correspondent pas
+              </p>
+            )}
+            {newPassword && confirmPassword && newPassword === confirmPassword && (
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Les mots de passe correspondent
+              </p>
+            )}
+            <Button
+              onClick={handleChangePassword}
+              className="w-full bg-primary text-primary-foreground gap-2">
               <Key className="w-4 h-4" /> Modifier le mot de passe
             </Button>
           </div>
         </div>
+
       </div>
     </AppLayout>
   );
