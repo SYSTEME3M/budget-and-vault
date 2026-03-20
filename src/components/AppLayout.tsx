@@ -13,7 +13,7 @@ import nexoraLogo from "@/assets/nexora-logo.png";
 
 const getNavItems = (isAdmin: boolean) => {
   const items = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-primary", bg: "bg-primary/10" },
+    { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-red-400", bg: "bg-red-400/10" },
     { path: "/entrees-depenses", icon: TrendingUp, label: "Entrées & Dépenses", color: "text-green-400", bg: "bg-green-400/10" },
     { path: "/historique", icon: History, label: "Historique", color: "text-accent", bg: "bg-accent/10" },
     { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300", bg: "bg-orange-300/10" },
