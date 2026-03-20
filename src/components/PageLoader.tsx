@@ -1,63 +1,61 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import nexoraLogo from "@/assets/nexora-logo.png";
 
 interface PageLoaderProps {
   duration?: number;
   children: React.ReactNode;
+  onlyAuth?: boolean; // 🔥 nouveau
 }
 
-export default function PageLoader({ duration = 600, children }: PageLoaderProps) {
+export default function PageLoader({
+  duration = 600,
+  children,
+  onlyAuth = false,
+}: PageLoaderProps) {
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  // 🔥 détecte pages auth
+  const isAuthPage =
+    location.pathname === "/login" ||
+    location.pathname === "/register";
 
   useEffect(() => {
+    // 🔥 si seulement auth et on n'est pas sur auth → skip loader
+    if (onlyAuth && !isAuthPage) {
+      setLoading(false);
+      return;
+    }
+
     const timer = setTimeout(() => setLoading(false), duration);
     return () => clearTimeout(timer);
-  }, [duration]);
+  }, [duration, onlyAuth, isAuthPage]);
 
   if (loading) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-10"
-        style={{
-          background: "radial-gradient(ellipse at center, #0d2d6b 0%, #061530 100%)",
-        }}
-      >
-        <style>{`
-          @keyframes dot-bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(8px); }
-          }
-        `}</style>
-
-        <div className="flex flex-col items-center gap-6">
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-10 bg-gradient-to-br from-[#061530] via-[#0d2d6b] to-[#020617]">
+        
+        {/* 🔥 Logo + glow */}
+        <div className="flex flex-col items-center gap-6 animate-fadeIn">
           <img
             src={nexoraLogo}
             alt="Nexora"
-            className="w-20 h-20 object-contain drop-shadow-2xl"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
+            className="w-20 h-20 object-contain drop-shadow-[0_0_25px_rgba(255,255,255,0.3)] animate-pulse"
           />
-          <div
-            className="text-3xl font-black"
-            style={{ color: "#ffffff", letterSpacing: "0.3em", fontFamily: "sans-serif" }}
-          >
+
+          <h1 className="text-3xl font-black tracking-[0.3em] text-white">
             NEXORA
-          </div>
+          </h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* 🔥 Loader dots modern */}
+        <div className="flex gap-3">
           {[0, 1, 2].map((i) => (
-            <div
+            <span
               key={i}
-              style={{
-                width: "14px",
-                height: "14px",
-                borderRadius: "50%",
-                backgroundColor: "#f5c200",
-                animation: "dot-bounce 0.8s ease-in-out infinite",
-                animationDelay: `${i * 0.2}s`,
-              }}
+              className="w-3.5 h-3.5 rounded-full bg-yellow-400 animate-bounce"
+              style={{ animationDelay: `${i * 0.2}s` }}
             />
           ))}
         </div>
