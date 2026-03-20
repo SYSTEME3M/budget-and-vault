@@ -6,10 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   MapPin, Home, Zap, Lock, Plus, X, Search,
   Heart, Phone, MessageCircle, Trash2, Edit2,
-  ChevronDown, ChevronUp, Star, Package, Image,
-  Filter, CheckCircle2, Tag
+  Filter, Image, Copy, CheckCircle2, ExternalLink,
+  Share2, User
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -53,12 +53,24 @@ function formatPrix(prix: number): string {
   return prix.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " $";
 }
 
-function getTypeInfo(type: TypeBien) {
-  return TYPES.find(t => t.value === type) || TYPES[0];
-}
-
-function getStatutInfo(statut: Statut) {
-  return STATUTS.find(s => s.value === statut) || STATUTS[0];
+// ─── Composant CopyButton ─────────────────────────────────
+function CopyButton({ text, label = "Copier" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy}
+      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-all flex-shrink-0 ${
+        copied ? "bg-green-500 text-white" : "bg-violet-100 text-violet-700 hover:bg-violet-200"
+      }`}>
+      {copied ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? "Copié !" : label}
+    </button>
+  );
 }
 
 // ─── Composant Card Annonce ───────────────────────────────
@@ -77,10 +89,14 @@ function AnnonceCard({
   onDelete: (id: string) => void;
   isOwner: boolean;
 }) {
-  const typeInfo = getTypeInfo(annonce.type);
-  const statutInfo = getStatutInfo(annonce.statut);
+  const typeInfo = TYPES.find(t => t.value === annonce.type) || TYPES[0];
+  const statutInfo = STATUTS.find(s => s.value === annonce.statut) || STATUTS[0];
   const isFavori = annonce.favoris?.includes(userId);
   const photo = annonce.images?.[0];
+
+  // URLs
+  const annonceUrl = `${window.location.origin}/immobilier/annonce/${annonce.id}`;
+  const vendeurUrl = `${window.location.origin}/immobilier/vendeur/${annonce.user_id}`;
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 group">
@@ -138,12 +154,40 @@ function AnnonceCard({
 
         <p className="text-violet-600 font-black text-lg mt-2">{formatPrix(annonce.prix)}</p>
 
-        <p className="text-xs text-gray-400 mt-0.5">Par {annonce.auteur_nom}</p>
+        {/* Vendeur + lien profil */}
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-gray-400">Par {annonce.auteur_nom}</p>
+          <Link to={`/immobilier/vendeur/${annonce.user_id}`}
+            className="text-xs text-violet-600 font-semibold hover:underline flex items-center gap-1">
+            <User className="w-3 h-3" /> Voir sa boutique
+          </Link>
+        </div>
 
-        {/* Actions */}
+        {/* ── Liens de partage ── */}
+        <div className="mt-3 space-y-2">
+          {/* Lien annonce */}
+          <div className="flex items-center gap-2 bg-violet-50 rounded-xl p-2 border border-violet-100">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-violet-500 font-semibold mb-0.5">🔗 Lien de cette annonce</p>
+              <p className="text-xs text-gray-500 font-mono truncate">{annonceUrl.replace("https://", "")}</p>
+            </div>
+            <CopyButton text={annonceUrl} label="Copier" />
+          </div>
+
+          {/* Lien profil vendeur */}
+          <div className="flex items-center gap-2 bg-blue-50 rounded-xl p-2 border border-blue-100">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-blue-500 font-semibold mb-0.5">🏪 Boutique du vendeur</p>
+              <p className="text-xs text-gray-500 font-mono truncate">{vendeurUrl.replace("https://", "")}</p>
+            </div>
+            <CopyButton text={vendeurUrl} label="Copier" />
+          </div>
+        </div>
+
+        {/* Actions contact */}
         <div className="flex gap-2 mt-3">
           {annonce.whatsapp && (
-            <a href={`https://wa.me/${annonce.whatsapp.replace(/[^0-9]/g, "")}?text=Bonjour, je suis intéressé par : ${annonce.titre}`}
+            <a href={`https://wa.me/${annonce.whatsapp.replace(/[^0-9]/g, "")}?text=Bonjour, je suis intéressé par : ${annonce.titre} — ${annonceUrl}`}
               target="_blank" rel="noopener noreferrer"
               className="flex-1 py-2 rounded-xl bg-[#25D366] text-white text-xs font-bold flex items-center justify-center gap-1 hover:opacity-90">
               <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
@@ -178,6 +222,7 @@ export default function ImmobilierPage() {
   const user = getNexoraUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const hasPremium = user?.plan === "premium" || user?.plan === "admin";
   const userId = user?.id || "guest";
@@ -189,6 +234,7 @@ export default function ImmobilierPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showFiltres, setShowFiltres] = useState(false);
+  const [copiedProfil, setCopiedProfil] = useState(false);
 
   // Filtres
   const [searchQ, setSearchQ] = useState("");
@@ -208,6 +254,9 @@ export default function ImmobilierPage() {
   };
   const [form, setForm] = useState(emptyForm);
 
+  // URL profil vendeur de l'utilisateur connecté
+  const monProfilUrl = `${window.location.origin}/immobilier/vendeur/${userId}`;
+
   // ── Charger annonces
   const loadAnnonces = async () => {
     setLoading(true);
@@ -221,7 +270,7 @@ export default function ImmobilierPage() {
 
   useEffect(() => { loadAnnonces(); }, []);
 
-  // ── Upload photo
+  // ── Upload photos
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length + form.images.length > 6) {
@@ -248,13 +297,12 @@ export default function ImmobilierPage() {
     setUploadingPhoto(false);
   };
 
-  // ── Soumettre annonce
+  // ── Soumettre
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.titre || !form.prix || !form.ville || !form.contact) {
       toast({ title: "Remplissez tous les champs obligatoires", variant: "destructive" }); return;
     }
-
     setSaving(true);
     const payload = {
       user_id: userId,
@@ -271,14 +319,12 @@ export default function ImmobilierPage() {
       images: form.images,
       favoris: [],
     };
-
     let error;
     if (editingId) {
       ({ error } = await supabase.from("nexora_annonces_immo" as any).update(payload).eq("id", editingId));
     } else {
       ({ error } = await supabase.from("nexora_annonces_immo" as any).insert(payload));
     }
-
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
@@ -294,16 +340,11 @@ export default function ImmobilierPage() {
   // ── Modifier
   const handleEdit = (a: Annonce) => {
     setForm({
-      titre: a.titre,
-      description: a.description || "",
-      prix: String(a.prix),
-      type: a.type,
-      ville: a.ville,
-      quartier: a.quartier || "",
-      contact: a.contact,
-      whatsapp: a.whatsapp || "",
-      statut: a.statut,
-      images: a.images || [],
+      titre: a.titre, description: a.description || "",
+      prix: String(a.prix), type: a.type,
+      ville: a.ville, quartier: a.quartier || "",
+      contact: a.contact, whatsapp: a.whatsapp || "",
+      statut: a.statut, images: a.images || [],
     });
     setEditingId(a.id);
     setShowForm(true);
@@ -318,7 +359,7 @@ export default function ImmobilierPage() {
     loadAnnonces();
   };
 
-  // ── Toggle favori
+  // ── Favori
   const handleFavori = async (id: string) => {
     const annonce = annonces.find(a => a.id === id);
     if (!annonce) return;
@@ -330,17 +371,28 @@ export default function ImmobilierPage() {
     setAnnonces(prev => prev.map(a => a.id === id ? { ...a, favoris: newFavoris } : a));
   };
 
+  // ── Copier lien profil
+  const handleCopyProfil = () => {
+    navigator.clipboard.writeText(monProfilUrl);
+    setCopiedProfil(true);
+    setTimeout(() => setCopiedProfil(false), 2500);
+  };
+
   // ── Filtrer
   const filtered = annonces.filter(a => {
-    const matchSearch = !searchQ || a.titre.toLowerCase().includes(searchQ.toLowerCase()) || a.ville.toLowerCase().includes(searchQ.toLowerCase());
+    const matchSearch = !searchQ ||
+      a.titre.toLowerCase().includes(searchQ.toLowerCase()) ||
+      a.ville.toLowerCase().includes(searchQ.toLowerCase()) ||
+      a.auteur_nom.toLowerCase().includes(searchQ.toLowerCase());
     const matchType = !filterType || a.type === filterType;
     const matchVille = !filterVille || a.ville.toLowerCase().includes(filterVille.toLowerCase());
     const matchPrix = !filterPrixMax || a.prix <= parseFloat(filterPrixMax);
     const matchStatut = !filterStatut || a.statut === filterStatut;
-    return matchSearch && matchType && matchVille && matchPrix && matchStatu;
+    return matchSearch && matchType && matchVille && matchPrix && matchStatut;
   });
 
   const hasFilters = filterType || filterVille || filterPrixMax || filterStatut;
+  const mesAnnonces = annonces.filter(a => a.user_id === userId);
 
   return (
     <AppLayout>
@@ -376,6 +428,42 @@ export default function ImmobilierPage() {
           </div>
         </div>
 
+        {/* ── Bannière lien profil vendeur (si premium) ── */}
+        {hasPremium && (
+          <div className="bg-gradient-to-r from-blue-50 to-violet-50 border border-blue-200 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Share2 className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                  🏪 Votre boutique immobilière
+                  <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full font-normal">
+                    {mesAnnonces.length} annonce{mesAnnonces.length > 1 ? "s" : ""}
+                  </span>
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Partagez ce lien pour que les gens voient toutes vos annonces
+                </p>
+                <div className="flex items-center gap-2 mt-2 p-2 bg-white rounded-xl border border-blue-100">
+                  <p className="text-xs text-violet-600 font-mono truncate flex-1">{monProfilUrl}</p>
+                  <button onClick={handleCopyProfil}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      copiedProfil ? "bg-green-500 text-white" : "bg-violet-600 text-white hover:bg-violet-700"
+                    }`}>
+                    {copiedProfil ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedProfil ? "Copié !" : "Copier"}
+                  </button>
+                </div>
+              </div>
+              <Link to={`/immobilier/vendeur/${userId}`}
+                className="flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold hover:bg-violet-700 transition-colors">
+                <ExternalLink className="w-3.5 h-3.5" /> Voir
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* ── Accès Premium requis ── */}
         {!hasPremium && (
           <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200 rounded-2xl p-6 text-center space-y-4">
@@ -384,8 +472,8 @@ export default function ImmobilierPage() {
             </div>
             <h2 className="text-lg font-black text-gray-900">Publication réservée aux membres Premium</h2>
             <p className="text-gray-500 text-sm max-w-sm mx-auto">
-              Activez le Premium pour publier vos annonces immobilières.
-              La consultation des annonces est gratuite pour tous.
+              Activez le Premium pour publier vos annonces et obtenir votre lien de boutique personnel.
+              La consultation est gratuite pour tous.
             </p>
             <Link to="/abonnement"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold px-6 py-3 rounded-xl text-sm hover:opacity-90 shadow-md">
@@ -412,7 +500,7 @@ export default function ImmobilierPage() {
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
 
-              {/* Type de bien */}
+              {/* Type */}
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Type de bien *</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -506,7 +594,6 @@ export default function ImmobilierPage() {
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">
                   Photos ({form.images.length}/6)
                 </label>
-
                 {form.images.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {form.images.map((url, i) => (
@@ -526,7 +613,6 @@ export default function ImmobilierPage() {
                     ))}
                   </div>
                 )}
-
                 <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
                   onChange={handlePhotoUpload} />
                 <button type="button"
@@ -559,13 +645,11 @@ export default function ImmobilierPage() {
             RECHERCHE & FILTRES
         ════════════════════════════ */}
         <div className="space-y-3">
-
-          {/* Barre recherche */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                placeholder="Rechercher une annonce, une ville..."
+                placeholder="Rechercher une annonce, ville, vendeur..."
                 className="w-full pl-9 pr-4 h-10 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-violet-400 transition-colors" />
             </div>
             <button onClick={() => setShowFiltres(!showFiltres)}
@@ -585,7 +669,7 @@ export default function ImmobilierPage() {
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                 !filterType ? "bg-violet-600 text-white border-violet-600" : "bg-white text-gray-600 border-gray-200"
               }`}>
-              🏘️ Tout
+              🏘️ Tout ({annonces.length})
             </button>
             {TYPES.map(t => (
               <button key={t.value} onClick={() => setFilterType(filterType === t.value ? "" : t.value)}
@@ -612,8 +696,7 @@ export default function ImmobilierPage() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1 block">Statut</label>
-                <select value={filterStatut}
-                  onChange={e => setFilterStatut(e.target.value as Statut | "")}
+                <select value={filterStatut} onChange={e => setFilterStatut(e.target.value as Statut | "")}
                   className="w-full h-9 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-violet-400 bg-white">
                   <option value="">Tous</option>
                   {STATUTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -655,7 +738,7 @@ export default function ImmobilierPage() {
             <p className="text-gray-400 text-sm mt-1">
               {annonces.length === 0
                 ? hasPremium ? "Soyez le premier à publier une annonce !" : "Les annonces apparaîtront ici."
-                : "Essayez de modifier vos filtres"
+                : "Essayez de modifier vos filtres."
               }
             </p>
           </div>
