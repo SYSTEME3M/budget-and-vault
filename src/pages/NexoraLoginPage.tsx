@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Eye, EyeOff, Lock, User, Mail, AtSign, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { loginUser, registerUser, validatePassword, initAdminUser, isNexoraAuthenticated } from "@/lib/nexora-auth";
 import { useToast } from "@/hooks/use-toast";
 import nexoraLogo from "@/assets/nexora-logo.png";
@@ -36,7 +36,6 @@ export default function NexoraLoginPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [pageReady, setPageReady] = useState(false);
-  const [time, setTime] = useState(new Date());
 
   // Login fields
   const [identifier, setIdentifier] = useState("");
@@ -54,22 +53,43 @@ export default function NexoraLoginPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
     initAdminUser();
-    const timer = setInterval(() => setTime(new Date()), 1000);
     const ready = setTimeout(() => setPageReady(true), 800);
     if (isNexoraAuthenticated()) {
       navigate("/dashboard", { replace: true });
     }
-    return () => { clearInterval(timer); clearTimeout(ready); };
+    return () => clearTimeout(ready);
   }, []);
 
-  const clockStr = time.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const dateStr = time.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  // ── Splash screen
+  if (!pageReady) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+        style={{
+          background: "radial-gradient(ellipse at center, hsl(217 89% 20%) 0%, hsl(217 89% 10%) 100%)"
+        }}>
+        <div className="flex flex-col items-center gap-6">
+          <img src={nexoraLogo} alt="Nexora"
+            className="w-24 h-24 object-contain drop-shadow-2xl animate-pulse" />
+          <div className="text-3xl font-black text-white tracking-widest">NEXORA</div>
+          <div className="flex gap-4 mt-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="w-5 h-5 rounded-full bg-yellow-400"
+                style={{
+                  animation: "bounce 0.7s ease-in-out infinite",
+                  animationDelay: `${i * 0.2}s`
+                }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // ── Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier.trim() || !password.trim()) {
@@ -78,7 +98,11 @@ export default function NexoraLoginPage() {
     }
     setLoading(true);
     try {
-      const result = await loginUser({ identifier: identifier.trim(), password: password.trim(), remember });
+      const result = await loginUser({
+        identifier: identifier.trim(),
+        password: password.trim(),
+        remember,
+      });
       if (result.success && result.user) {
         toast({
           title: `Bienvenue ${result.user.nom_prenom} !`,
@@ -95,6 +119,7 @@ export default function NexoraLoginPage() {
     }
   };
 
+  // ── Register
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomPrenom || !username || !email || !regPassword || !confirmPassword) {
@@ -126,7 +151,8 @@ export default function NexoraLoginPage() {
         toast({ title: "Compte créé !", description: "Vous pouvez maintenant vous connecter." });
         setMode("login");
         setIdentifier(username);
-        setNomPrenom(""); setUsername(""); setEmail(""); setRegPassword(""); setConfirmPassword("");
+        setNomPrenom(""); setUsername(""); setEmail("");
+        setRegPassword(""); setConfirmPassword("");
       } else {
         toast({ title: "Erreur", description: result.error, variant: "destructive" });
       }
@@ -137,49 +163,27 @@ export default function NexoraLoginPage() {
     }
   };
 
-  if (!pageReady) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-        style={{
-          background: "radial-gradient(ellipse at center, hsl(217 89% 20%) 0%, hsl(217 89% 10%) 100%)"
-        }}>
-        <div className="flex flex-col items-center gap-6">
-          <img src={nexoraLogo} alt="Nexora" className="w-24 h-24 object-contain drop-shadow-2xl animate-pulse" />
-          <div className="text-3xl font-black text-white tracking-widest">NEXORA</div>
-          <div className="flex gap-4 mt-2">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="w-5 h-5 rounded-full bg-yellow-400"
-                style={{ animation: "bounce 0.7s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: "radial-gradient(ellipse at 60% 40%, hsl(217 89% 96%) 0%, hsl(217 30% 94%) 100%)" }}>
+      style={{
+        background: "radial-gradient(ellipse at 60% 40%, hsl(217 89% 96%) 0%, hsl(217 30% 94%) 100%)"
+      }}>
 
-      {/* Fond décoratif */}
+      {/* ── Fond décoratif ── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-10"
           style={{ background: "hsl(217 89% 40%)" }} />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-10"
           style={{ background: "hsl(45 100% 50%)" }} />
-        {/* Logo watermark */}
-        <img src={nexoraLogo} alt="" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 opacity-5 object-contain pointer-events-none select-none" />
+        <img src={nexoraLogo} alt=""
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 opacity-5 object-contain pointer-events-none select-none" />
       </div>
 
       <div className="w-full max-w-sm animate-fade-in-up relative z-10">
-        {/* Horloge */}
-        <div className="text-center mb-5">
-          <div className="font-mono text-3xl font-black text-primary tracking-widest">{clockStr}</div>
-          <div className="text-xs text-muted-foreground capitalize mt-0.5">{dateStr}</div>
-        </div>
 
         <div className="bg-card border border-border rounded-2xl shadow-brand-lg overflow-hidden">
-          {/* Header avec logo */}
+
+          {/* ── Header logo ── */}
           <div className="bg-primary px-6 py-7 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full border-2 border-white" />
@@ -191,12 +195,15 @@ export default function NexoraLoginPage() {
               </div>
               <h1 className="font-display text-2xl font-black text-white tracking-wide">NEXORA</h1>
               <p className="text-white/70 text-xs mt-1">
-                {mode === "login" ? "Connectez-vous à votre espace" : "Créez votre compte Nexora"}
+                {mode === "login"
+                  ? "Connectez-vous à votre espace"
+                  : "Créez votre compte Nexora"
+                }
               </p>
             </div>
           </div>
 
-          {/* Onglets */}
+          {/* ── Onglets ── */}
           <div className="flex border-b border-border">
             <button
               onClick={() => setMode("login")}
@@ -204,8 +211,7 @@ export default function NexoraLoginPage() {
                 mode === "login"
                   ? "text-primary border-b-2 border-primary bg-primary-bg"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
+              }`}>
               Se connecter
             </button>
             <button
@@ -214,16 +220,19 @@ export default function NexoraLoginPage() {
                 mode === "register"
                   ? "text-primary border-b-2 border-primary bg-primary-bg"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
+              }`}>
               S'inscrire
             </button>
           </div>
 
           <div className="px-6 py-6">
-            {mode === "login" ? (
+
+            {/* ════════════════════════
+                FORMULAIRE CONNEXION
+            ════════════════════════ */}
+            {mode === "login" && (
               <form onSubmit={handleLogin} className="space-y-4">
-                {/* Identifiant */}
+
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5" /> Username ou Email
@@ -237,7 +246,6 @@ export default function NexoraLoginPage() {
                   />
                 </div>
 
-                {/* Mot de passe */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5" /> Mot de passe
@@ -250,46 +258,46 @@ export default function NexoraLoginPage() {
                       placeholder="••••••••"
                       className="h-11 pr-12"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Se souvenir */}
-                <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={(e) => setRemember(e.target.checked)}
-                      className="rounded"
-                    />
-                    <span className="text-muted-foreground">Se souvenir de moi</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="rounded"
+                  />
+                  <label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer">
+                    Se souvenir de moi (30 jours)
                   </label>
                 </div>
 
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2"
-                >
+                  className="w-full h-11 font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2">
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <>
-                      <Lock className="w-4 h-4" /> Se connecter
-                    </>
+                    <><Lock className="w-4 h-4" /> Se connecter</>
                   )}
                 </Button>
+
               </form>
-            ) : (
+            )}
+
+            {/* ════════════════════════
+                FORMULAIRE INSCRIPTION
+            ════════════════════════ */}
+            {mode === "register" && (
               <form onSubmit={handleRegister} className="space-y-3.5">
-                {/* Nom et prénom */}
+
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5" /> Nom et Prénom *
@@ -299,23 +307,23 @@ export default function NexoraLoginPage() {
                     onChange={(e) => setNomPrenom(e.target.value)}
                     placeholder="Jean Dupont"
                     className="h-10"
+                    autoFocus
                   />
                 </div>
 
-                {/* Username */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
                     <AtSign className="w-3.5 h-3.5" /> Username *
                   </label>
                   <Input
                     value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ""))}
                     placeholder="mon_username"
                     className="h-10"
                   />
+                  <p className="text-xs text-muted-foreground mt-0.5">Lettres, chiffres et _ uniquement</p>
                 </div>
 
-                {/* Email */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" /> Email *
@@ -329,10 +337,9 @@ export default function NexoraLoginPage() {
                   />
                 </div>
 
-                {/* Mot de passe */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5" /> Mot de passe * (8 car. + lettre + chiffre + spécial)
+                    <Lock className="w-3.5 h-3.5" /> Mot de passe *
                   </label>
                   <div className="relative">
                     <Input
@@ -342,18 +349,14 @@ export default function NexoraLoginPage() {
                       placeholder="Mot de passe sécurisé"
                       className="h-10 pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowRegPassword(!showRegPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    >
+                    <button type="button" onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {regPassword && <PasswordStrength password={regPassword} />}
                 </div>
 
-                {/* Confirmer */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5" /> Confirmer le mot de passe *
@@ -366,49 +369,37 @@ export default function NexoraLoginPage() {
                       placeholder="Confirmer"
                       className="h-10 pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    >
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {confirmPassword && regPassword !== confirmPassword && (
-                    <p className="text-xs text-destructive mt-1">Les mots de passe ne correspondent pas.</p>
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Les mots de passe ne correspondent pas.
+                    </p>
+                  )}
+                  {confirmPassword && regPassword === confirmPassword && confirmPassword.length > 0 && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Les mots de passe correspondent.
+                    </p>
                   )}
                 </div>
 
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2 mt-1"
-                >
+                  className="w-full h-11 font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2 mt-1">
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <>
-                      <ChevronRight className="w-4 h-4" /> Créer mon compte
-                    </>
+                    <><ChevronRight className="w-4 h-4" /> Créer mon compte</>
                   )}
                 </Button>
+
               </form>
             )}
 
-            {/* Plans info */}
-            <div className="mt-5 p-3 bg-muted/50 rounded-xl border border-border">
-              <p className="text-xs font-semibold text-foreground mb-2">Plans disponibles :</p>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span><strong>Gratuit</strong> — Boutique + Factures + 10 Coffre-fort + Liens</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span><strong>Premium 10$/mois</strong> — Toutes les fonctionnalités illimitées</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
