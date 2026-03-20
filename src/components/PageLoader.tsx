@@ -6,7 +6,7 @@ interface PageLoaderProps {
   children: React.ReactNode;
 }
 
-export default function PageLoader({ duration = 15000, children }: PageLoaderProps) {
+export default function PageLoader({ duration = 10000, children }: PageLoaderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
