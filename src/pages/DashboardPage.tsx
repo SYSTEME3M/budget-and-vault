@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatAmount, convertAmount } from "@/lib/app-utils";
 import AppLayout from "@/components/AppLayout";
-import { TrendingUp, TrendingDown, History, Clock, ArrowUpRight, PiggyBank, HandCoins, Lock, Store, BadgeCheck, Zap } from "lucide-react";
+import {
+  TrendingUp, TrendingDown, History, Clock,
+  ArrowUpRight, PiggyBank, HandCoins, Lock,
+  Store, BadgeCheck, Zap
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { getNexoraUser } from "@/lib/nexora-auth";
 
@@ -15,7 +19,10 @@ function getGreeting() {
 }
 
 function getDateStr() {
-  return new Date().toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  return new Date().toLocaleDateString("fr-FR", {
+    weekday: "long", year: "numeric",
+    month: "long", day: "numeric"
+  });
 }
 
 export default function DashboardPage() {
@@ -79,6 +86,7 @@ export default function DashboardPage() {
 
   const fmt = (v: number) =>
     formatAmount(devise === "XOF" ? v : convertAmount(v, "XOF", "USD"), devise);
+
   const clockStr = time.toLocaleTimeString("fr-FR", {
     hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
@@ -87,26 +95,45 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-3 animate-fade-in-up pb-4">
+      {/* Conteneur principal — largeur fixe, overflow caché */}
+      <div
+        className="w-full overflow-hidden"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}>
 
-        {/* ── Hero greeting ── */}
-        <div className="relative overflow-hidden rounded-xl bg-primary p-3.5 text-primary-foreground shadow-brand-lg">
+        {/* ══════════════════════════
+            HERO GREETING
+        ══════════════════════════ */}
+        <div
+          className="relative overflow-hidden rounded-xl bg-primary text-primary-foreground shadow-brand-lg"
+          style={{ padding: "12px 14px", flexShrink: 0 }}>
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full border-2 border-white" />
-            <div className="absolute -bottom-4 right-16 w-20 h-20 rounded-full border-2 border-white" />
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full border-2 border-white" />
+            <div className="absolute -bottom-4 right-14 w-20 h-20 rounded-full border-2 border-white" />
           </div>
           <div className="relative flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <h1 className="font-display text-base font-black flex items-center gap-1.5 leading-tight">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                className="font-display font-black flex items-center gap-1.5"
+                style={{ fontSize: "15px", lineHeight: "1.3", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {getGreeting()}, {displayName} ! 👋
-                {hasBadge && <BadgeCheck className="w-4 h-4 text-yellow-300 flex-shrink-0" />}
-              </h1>
-              <p className="text-primary-foreground/70 text-xs mt-0.5 capitalize truncate">
+                {hasBadge && <BadgeCheck style={{ width: 14, height: 14, color: "#fde047", flexShrink: 0 }} />}
+              </div>
+              <div
+                className="text-primary-foreground/70 capitalize"
+                style={{ fontSize: "11px", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {getDateStr()}
-              </p>
-              <div className="flex items-center gap-1 mt-1">
-                <Clock className="w-3 h-3 text-accent" />
-                <span className="font-mono text-accent font-black text-xs tracking-widest">
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+                <Clock style={{ width: 11, height: 11, color: "var(--accent)" }} />
+                <span
+                  className="font-mono font-black"
+                  style={{ fontSize: "11px", color: "var(--accent)", letterSpacing: "0.1em" }}>
                   {clockStr}
                 </span>
               </div>
@@ -114,129 +141,204 @@ export default function DashboardPage() {
             <select
               value={devise}
               onChange={(e) => setDevise(e.target.value as "XOF" | "USD")}
-              className="flex-shrink-0 bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground rounded-lg px-2 py-1 text-xs font-semibold cursor-pointer">
+              className="bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground rounded-lg font-semibold cursor-pointer"
+              style={{ padding: "4px 8px", fontSize: "11px", flexShrink: 0 }}>
               <option value="XOF">XOF</option>
               <option value="USD">USD</option>
             </select>
           </div>
         </div>
 
-        {/* ── Solde + Entrées + Dépenses ── */}
-        <div className="grid grid-cols-1 gap-2">
-          {/* Solde net */}
-          <div className={`rounded-xl p-3 shadow-sm border ${
-            solde >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-          }`}>
-            <div className="text-xs font-bold uppercase tracking-wide mb-0.5 text-muted-foreground">
-              Solde net total
-            </div>
-            <div className={`text-xl font-black font-display ${
-              solde >= 0 ? "text-green-700" : "text-destructive"
-            }`}>
-              {loading ? "—" : fmt(solde)}
-            </div>
+        {/* ══════════════════════════
+            SOLDE NET
+        ══════════════════════════ */}
+        <div
+          className={`rounded-xl border ${solde >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}
+          style={{ padding: "10px 14px", flexShrink: 0 }}>
+          <div
+            className="font-bold uppercase text-muted-foreground"
+            style={{ fontSize: "10px", letterSpacing: "0.05em", marginBottom: "2px" }}>
+            Solde net total
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Link to="/entrees-depenses"
-              className="bg-card border border-border rounded-xl p-3 shadow-sm hover:shadow-brand transition-all">
-              <div className="text-xs font-bold text-green-600 uppercase tracking-wide mb-1 flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> Entrées
-              </div>
-              <div className="text-lg font-black text-green-600 truncate">
-                {loading ? "—" : fmt(stats.totalEntrees)}
-              </div>
-            </Link>
-            <Link to="/entrees-depenses"
-              className="bg-card border border-border rounded-xl p-3 shadow-sm hover:shadow-brand transition-all">
-              <div className="text-xs font-bold text-destructive uppercase tracking-wide mb-1 flex items-center gap-1">
-                <TrendingDown className="w-3 h-3" /> Dépenses
-              </div>
-              <div className="text-lg font-black text-destructive truncate">
-                {loading ? "—" : fmt(stats.totalDepenses)}
-              </div>
-            </Link>
+          <div
+            className={`font-black font-display ${solde >= 0 ? "text-green-700" : "text-destructive"}`}
+            style={{ fontSize: "20px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {loading ? "—" : fmt(solde)}
           </div>
         </div>
 
-        {/* ── Quick links ligne 1 ── */}
-        <div className="grid grid-cols-3 gap-2">
-          <Link to="/coffre-fort"
-            className="bg-primary-bg border border-primary/20 rounded-xl p-2.5 card-hover flex flex-col items-center text-center">
-            <Lock className="w-5 h-5 text-primary mb-1" />
-            <div className="font-semibold text-xs text-primary leading-tight">Coffre-fort</div>
-            <div className="text-xl font-display font-black text-primary mt-0.5">
-              {loading ? "—" : stats.nbCoffre}
+        {/* ══════════════════════════
+            ENTRÉES + DÉPENSES
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <Link
+            to="/entrees-depenses"
+            className="bg-card border border-border rounded-xl hover:shadow-brand transition-all"
+            style={{ padding: "10px 12px", overflow: "hidden" }}>
+            <div
+              className="font-bold text-green-600 uppercase flex items-center gap-1"
+              style={{ fontSize: "10px", letterSpacing: "0.05em", marginBottom: "4px" }}>
+              <TrendingUp style={{ width: 11, height: 11 }} /> Entrées
+            </div>
+            <div
+              className="font-black text-green-600"
+              style={{ fontSize: "17px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {loading ? "—" : fmt(stats.totalEntrees)}
             </div>
           </Link>
-          <Link to="/prets"
-            className="bg-orange-50 border border-orange-200 rounded-xl p-2.5 card-hover flex flex-col items-center text-center">
-            <HandCoins className="w-5 h-5 text-orange-500 mb-1" />
-            <div className="font-semibold text-xs text-orange-600 leading-tight">Prêts</div>
-            <div className="text-xl font-display font-black text-orange-600 mt-0.5">
-              {loading ? "—" : stats.nbPrets}
+
+          <Link
+            to="/entrees-depenses"
+            className="bg-card border border-border rounded-xl hover:shadow-brand transition-all"
+            style={{ padding: "10px 12px", overflow: "hidden" }}>
+            <div
+              className="font-bold text-destructive uppercase flex items-center gap-1"
+              style={{ fontSize: "10px", letterSpacing: "0.05em", marginBottom: "4px" }}>
+              <TrendingDown style={{ width: 11, height: 11 }} /> Dépenses
             </div>
-          </Link>
-          <Link to="/boutique"
-            className="bg-pink-50 border border-pink-200 rounded-xl p-2.5 card-hover flex flex-col items-center text-center">
-            <Store className="w-5 h-5 text-pink-500 mb-1" />
-            <div className="font-semibold text-xs text-pink-600 leading-tight">Boutique</div>
-            <div className="text-xl font-display font-black text-pink-600 mt-0.5">→</div>
+            <div
+              className="font-black text-destructive"
+              style={{ fontSize: "17px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {loading ? "—" : fmt(stats.totalDepenses)}
+            </div>
           </Link>
         </div>
 
-        {/* ── Quick links ligne 2 ── */}
-        <div className="grid grid-cols-2 gap-2">
-          <Link to="/investissements"
-            className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 card-hover flex flex-col items-center text-center">
-            <PiggyBank className="w-5 h-5 text-emerald-600 mb-1" />
-            <div className="font-semibold text-xs text-emerald-700 leading-tight">Investissements</div>
-            <div className="text-xl font-display font-black text-emerald-700 mt-0.5">
+        {/* ══════════════════════════
+            QUICK LINKS LIGNE 1
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+          {[
+            {
+              to: "/coffre-fort",
+              icon: <Lock style={{ width: 18, height: 18, color: "var(--primary)" }} />,
+              label: "Coffre-fort",
+              value: stats.nbCoffre,
+              cls: "bg-primary-bg border-primary/20",
+              textCls: "text-primary",
+            },
+            {
+              to: "/prets",
+              icon: <HandCoins style={{ width: 18, height: 18, color: "#f97316" }} />,
+              label: "Prêts",
+              value: stats.nbPrets,
+              cls: "bg-orange-50 border-orange-200",
+              textCls: "text-orange-600",
+            },
+            {
+              to: "/boutique",
+              icon: <Store style={{ width: 18, height: 18, color: "#ec4899" }} />,
+              label: "Boutique",
+              value: "→",
+              cls: "bg-pink-50 border-pink-200",
+              textCls: "text-pink-600",
+            },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`border rounded-xl card-hover flex flex-col items-center justify-center text-center ${item.cls}`}
+              style={{ padding: "10px 6px" }}>
+              {item.icon}
+              <div
+                className={`font-semibold ${item.textCls}`}
+                style={{ fontSize: "10px", marginTop: "4px", lineHeight: 1.2 }}>
+                {item.label}
+              </div>
+              <div
+                className={`font-display font-black ${item.textCls}`}
+                style={{ fontSize: "18px", marginTop: "2px", lineHeight: 1 }}>
+                {loading && item.value !== "→" ? "—" : item.value}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* ══════════════════════════
+            QUICK LINKS LIGNE 2
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+          <Link
+            to="/investissements"
+            className="bg-emerald-50 border border-emerald-200 rounded-xl card-hover flex flex-col items-center justify-center text-center"
+            style={{ padding: "10px 6px" }}>
+            <PiggyBank style={{ width: 18, height: 18, color: "#059669" }} />
+            <div className="font-semibold text-emerald-700" style={{ fontSize: "10px", marginTop: "4px" }}>
+              Investissements
+            </div>
+            <div className="font-display font-black text-emerald-700" style={{ fontSize: "18px", marginTop: "2px" }}>
               {loading ? "—" : stats.nbInvest}
             </div>
           </Link>
-          <Link to="/historique"
-            className="bg-destructive-bg border border-destructive/20 rounded-xl p-2.5 card-hover flex flex-col items-center text-center">
-            <History className="w-5 h-5 text-destructive mb-1" />
-            <div className="font-semibold text-xs text-destructive leading-tight">Historique</div>
-            <div className="text-xl font-display font-black text-destructive mt-0.5">↗</div>
+
+          <Link
+            to="/historique"
+            className="bg-destructive-bg border border-destructive/20 rounded-xl card-hover flex flex-col items-center justify-center text-center"
+            style={{ padding: "10px 6px" }}>
+            <History style={{ width: 18, height: 18, color: "var(--destructive)" }} />
+            <div className="font-semibold text-destructive" style={{ fontSize: "10px", marginTop: "4px" }}>
+              Historique
+            </div>
+            <div className="font-display font-black text-destructive" style={{ fontSize: "18px", marginTop: "2px" }}>
+              ↗
+            </div>
           </Link>
         </div>
 
-        {/* ── Transactions récentes ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* ══════════════════════════
+            TRANSACTIONS RÉCENTES
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
 
-          {/* Dernières dépenses */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <h2 className="font-display font-bold text-xs flex items-center gap-1 text-destructive">
-                <TrendingDown className="w-3.5 h-3.5" /> Dernières dépenses
-              </h2>
-              <Link to="/entrees-depenses"
-                className="text-xs text-primary hover:underline font-semibold flex items-center gap-0.5">
-                Voir tout <ArrowUpRight className="w-3 h-3" />
+          {/* Dépenses */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <span
+                className="font-display font-bold text-destructive flex items-center gap-1"
+                style={{ fontSize: "11px" }}>
+                <TrendingDown style={{ width: 12, height: 12 }} /> Dépenses
+              </span>
+              <Link
+                to="/entrees-depenses"
+                className="text-primary font-semibold flex items-center gap-0.5 hover:underline"
+                style={{ fontSize: "10px" }}>
+                Voir <ArrowUpRight style={{ width: 10, height: 10 }} />
               </Link>
             </div>
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               {loading ? (
-                <div className="p-3 text-center text-muted-foreground text-xs">Chargement...</div>
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Chargement...
+                </div>
               ) : stats.dernièresDepenses.length === 0 ? (
-                <div className="p-3 text-center text-muted-foreground text-xs">Aucune dépense</div>
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Aucune dépense
+                </div>
               ) : (
                 <div className="divide-y divide-border">
                   {stats.dernièresDepenses.map((d: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 px-3 py-2">
-                      <div className="w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                        <TrendingDown className="w-3 h-3 text-destructive" />
+                    <div
+                      key={i}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px" }}>
+                      <div
+                        className="bg-destructive/10 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ width: 22, height: 22 }}>
+                        <TrendingDown style={{ width: 11, height: 11, color: "var(--destructive)" }} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">{d.titre}</div>
-                        <div className="text-xs text-muted-foreground">{d.date_depense}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          className="font-medium"
+                          style={{ fontSize: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {d.titre}
+                        </div>
+                        <div className="text-muted-foreground" style={{ fontSize: "9px" }}>
+                          {d.date_depense}
+                        </div>
                       </div>
-                      <div className="text-xs font-bold text-destructive whitespace-nowrap">
-                        -{fmt(d.devise === "USD"
-                          ? convertAmount(Number(d.montant), "USD", "XOF")
-                          : Number(d.montant))}
+                      <div
+                        className="font-bold text-destructive"
+                        style={{ fontSize: "10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        -{fmt(d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant))}
                       </div>
                     </div>
                   ))}
@@ -245,37 +347,55 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Dernières entrées */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <h2 className="font-display font-bold text-xs flex items-center gap-1 text-green-600">
-                <TrendingUp className="w-3.5 h-3.5" /> Dernières entrées
-              </h2>
-              <Link to="/entrees-depenses"
-                className="text-xs text-primary hover:underline font-semibold flex items-center gap-0.5">
-                Voir tout <ArrowUpRight className="w-3 h-3" />
+          {/* Entrées */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <span
+                className="font-display font-bold text-green-600 flex items-center gap-1"
+                style={{ fontSize: "11px" }}>
+                <TrendingUp style={{ width: 12, height: 12 }} /> Entrées
+              </span>
+              <Link
+                to="/entrees-depenses"
+                className="text-primary font-semibold flex items-center gap-0.5 hover:underline"
+                style={{ fontSize: "10px" }}>
+                Voir <ArrowUpRight style={{ width: 10, height: 10 }} />
               </Link>
             </div>
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               {loading ? (
-                <div className="p-3 text-center text-muted-foreground text-xs">Chargement...</div>
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Chargement...
+                </div>
               ) : stats.dernièresEntrees.length === 0 ? (
-                <div className="p-3 text-center text-muted-foreground text-xs">Aucune entrée</div>
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Aucune entrée
+                </div>
               ) : (
                 <div className="divide-y divide-border">
                   {stats.dernièresEntrees.map((e: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 px-3 py-2">
-                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <TrendingUp className="w-3 h-3 text-green-600" />
+                    <div
+                      key={i}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px" }}>
+                      <div
+                        className="bg-green-100 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ width: 22, height: 22 }}>
+                        <TrendingUp style={{ width: 11, height: 11, color: "#16a34a" }} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">{e.titre}</div>
-                        <div className="text-xs text-muted-foreground">{e.date_entree}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          className="font-medium"
+                          style={{ fontSize: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {e.titre}
+                        </div>
+                        <div className="text-muted-foreground" style={{ fontSize: "9px" }}>
+                          {e.date_entree}
+                        </div>
                       </div>
-                      <div className="text-xs font-bold text-green-600 whitespace-nowrap">
-                        +{fmt(e.devise === "USD"
-                          ? convertAmount(Number(e.montant), "USD", "XOF")
-                          : Number(e.montant))}
+                      <div
+                        className="font-bold text-green-600"
+                        style={{ fontSize: "10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        +{fmt(e.devise === "USD" ? convertAmount(Number(e.montant), "USD", "XOF") : Number(e.montant))}
                       </div>
                     </div>
                   ))}
@@ -285,18 +405,24 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Bannière Premium ── */}
+        {/* ══════════════════════════
+            BANNIÈRE PREMIUM
+        ══════════════════════════ */}
         {nexoraUser && nexoraUser.plan === "gratuit" && (
-          <div className="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-3 text-white flex items-center gap-2.5">
-            <Zap className="w-6 h-6 text-yellow-300 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-xs">Passez au Premium !</div>
-              <div className="text-xs text-white/80 truncate">
+          <div
+            className="bg-gradient-to-r from-primary to-primary/80 rounded-xl text-white"
+            style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+            <Zap style={{ width: 20, height: 20, color: "#fde047", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="font-bold" style={{ fontSize: "12px" }}>Passez au Premium !</div>
+              <div className="text-white/80" style={{ fontSize: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 Toutes les fonctionnalités illimitées — 10$/mois
               </div>
             </div>
-            <Link to="/abonnement"
-              className="flex-shrink-0 bg-yellow-400 text-gray-900 font-bold text-xs px-2.5 py-1.5 rounded-lg">
+            <Link
+              to="/abonnement"
+              className="bg-yellow-400 text-gray-900 font-bold rounded-lg"
+              style={{ padding: "5px 10px", fontSize: "11px", flexShrink: 0, whiteSpace: "nowrap" }}>
               Voir
             </Link>
           </div>
