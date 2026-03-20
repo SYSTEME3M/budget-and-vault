@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { getNexoraUser, isNexoraAdmin, hasNexoraPremium } from "@/lib/nexora-auth";
 import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone, X } from "lucide-react";
@@ -10,18 +10,26 @@ declare global {
   }
 }
 
+const KKIAPAY_KEY = "f19f84bbf2bbe4249947974bc0929691d3afd5ae";
+
 export default function AbonnementPage() {
   const user = getNexoraUser();
   const isAdmin = isNexoraAdmin();
   const isPremium = hasNexoraPremium();
+  const [kkiapayReady, setKkiapayReady] = useState(false);
 
   // Charger le SDK KKiaPay
   useEffect(() => {
-    if (document.getElementById("kkiapay-sdk")) return;
+    if (document.getElementById("kkiapay-sdk")) {
+      setKkiapayReady(true);
+      return;
+    }
     const script = document.createElement("script");
     script.id = "kkiapay-sdk";
     script.src = "https://cdn.kkiapay.me/k.js";
     script.async = true;
+    script.onload = () => setKkiapayReady(true);
+    script.onerror = () => console.error("Échec du chargement KKiaPay SDK");
     document.body.appendChild(script);
   }, []);
 
@@ -35,11 +43,18 @@ export default function AbonnementPage() {
   }, []);
 
   const handleSubscribe = () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      alert("Vous devez être connecté pour vous abonner.");
+      return;
+    }
+    if (!kkiapayReady || !window.openKkiapayWidget) {
+      alert("Paiement en cours de chargement, réessayez dans 2 secondes.");
+      return;
+    }
     window.openKkiapayWidget({
       amount: 6500,
-      key: process.env.NEXT_PUBLIC_KKIAPAY_API_KEY,
-      sandbox: true, // ← passer à false en production
+      key: KKIAPAY_KEY,
+      sandbox: false,
       email: user.email ?? "",
       data: JSON.stringify({ userId: user.id }),
       callback: `${window.location.origin}/abonnement?payment=success`,
@@ -227,9 +242,10 @@ export default function AbonnementPage() {
               <div className="space-y-3">
                 <button
                   onClick={handleSubscribe}
-                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
+                  disabled={!kkiapayReady}
+                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                   <Zap className="w-4 h-4" />
-                  S'abonner — 10$ / mois
+                  {kkiapayReady ? "S'abonner — 10$ / mois" : "Chargement..."}
                 </button>
 
                 <div className="bg-white/70 rounded-xl p-3 border border-violet-100">
