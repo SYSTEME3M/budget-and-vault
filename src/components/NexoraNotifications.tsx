@@ -39,7 +39,6 @@ export default function NexoraNotifications() {
   useEffect(() => {
     if (!user?.id) return;
     loadNotifs();
-
     const channel = supabase
       .channel("notifs_" + user.id)
       .on("postgres_changes", {
@@ -54,25 +53,18 @@ export default function NexoraNotifications() {
         setTimeout(() => setVisible(null), 5000);
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
   const markAsRead = async (id: string) => {
-    await supabase
-      .from("nexora_notifications" as any)
-      .update({ lu: true })
-      .eq("id", id);
+    await supabase.from("nexora_notifications" as any).update({ lu: true }).eq("id", id);
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
   };
 
   const markAllRead = async () => {
     if (!user?.id) return;
-    await supabase
-      .from("nexora_notifications" as any)
-      .update({ lu: true })
-      .eq("user_id", user.id)
-      .eq("lu", false);
+    await supabase.from("nexora_notifications" as any)
+      .update({ lu: true }).eq("user_id", user.id).eq("lu", false);
     setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
   };
 
@@ -80,6 +72,7 @@ export default function NexoraNotifications() {
 
   return (
     <>
+      {/* Style animation — toujours présent */}
       <style>{`
         @keyframes slideDown {
           from { transform: translate(-50%, -16px); opacity: 0; }
@@ -88,7 +81,7 @@ export default function NexoraNotifications() {
         .notif-toast { animation: slideDown 0.3s ease forwards; }
       `}</style>
 
-      {/* ── Toast en haut ── */}
+      {/* Toast */}
       {visible && (() => {
         const cfg = TYPE_CONFIG[visible.type] || TYPE_CONFIG.info;
         const Icon = cfg.icon;
@@ -100,8 +93,7 @@ export default function NexoraNotifications() {
               <p className="font-bold text-sm text-gray-900">{visible.titre}</p>
               <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{visible.message}</p>
             </div>
-            <button
-              onClick={() => setVisible(null)}
+            <button onClick={() => setVisible(null)}
               className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors">
               <X className="w-4 h-4 text-gray-500" />
             </button>
@@ -109,10 +101,9 @@ export default function NexoraNotifications() {
         );
       })()}
 
-      {/* ── Cloche ── */}
+      {/* Cloche */}
       <div className="relative">
-        <button
-          onClick={() => { setOpen(!open); if (!open) loadNotifs(); }}
+        <button onClick={() => { setOpen(!open); if (!open) loadNotifs(); }}
           className="relative p-2 rounded-xl hover:bg-muted transition-colors">
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
@@ -122,7 +113,6 @@ export default function NexoraNotifications() {
           )}
         </button>
 
-        {/* ── Dropdown ── */}
         {open && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
@@ -135,7 +125,6 @@ export default function NexoraNotifications() {
                   </button>
                 )}
               </div>
-
               <div className="overflow-y-auto flex-1">
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground text-sm">
@@ -146,9 +135,7 @@ export default function NexoraNotifications() {
                   const cfg = TYPE_CONFIG[notif.type] || TYPE_CONFIG.info;
                   const Icon = cfg.icon;
                   return (
-                    <div
-                      key={notif.id}
-                      onClick={() => markAsRead(notif.id)}
+                    <div key={notif.id} onClick={() => markAsRead(notif.id)}
                       className={`p-4 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors ${!notif.lu ? "bg-primary/5" : ""}`}>
                       <div className="flex items-start gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border ${cfg.bg}`}>
