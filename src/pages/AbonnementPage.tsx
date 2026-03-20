@@ -66,7 +66,9 @@ export default function AbonnementPage() {
             PLAN GRATUIT
         ══════════════════════════════ */}
         <div className={`bg-white border-2 rounded-2xl p-6 transition-all shadow-sm ${
-          !isPremium ? "border-violet-500 shadow-violet-100" : "border-gray-200"
+          !isPremium && !isAdmin
+            ? "border-violet-500 shadow-violet-100"
+            : "border-gray-200"
         }`}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -74,7 +76,7 @@ export default function AbonnementPage() {
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
                 Plan Gratuit
               </h2>
-              <p className="text-gray-500 text-sm font-semibold">0 FCFA / mois</p>
+              <p className="text-gray-500 text-sm font-semibold">0$ / mois</p>
             </div>
             {!isPremium && !isAdmin && (
               <span className="bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full">
@@ -83,10 +85,8 @@ export default function AbonnementPage() {
             )}
           </div>
 
-          {/* Fonctionnalités incluses */}
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Inclus
-          </p>
+          {/* Inclus */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inclus</p>
           <ul className="space-y-2.5 text-sm mb-5">
             {[
               {
@@ -137,10 +137,8 @@ export default function AbonnementPage() {
             ))}
           </ul>
 
-          {/* Fonctionnalités non incluses */}
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Non inclus
-          </p>
+          {/* Non inclus */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Non inclus</p>
           <ul className="space-y-2 text-sm">
             {[
               "Boutique (Premium uniquement)",
@@ -149,6 +147,7 @@ export default function AbonnementPage() {
               "Prêts & Dettes",
               "Médias",
               "🏠 Marché Immobilier",
+              "Badge bleu Premium",
             ].map((f) => (
               <li key={f} className="flex items-center gap-2 text-gray-400">
                 <X className="w-4 h-4 text-red-400 flex-shrink-0" />
@@ -177,8 +176,9 @@ export default function AbonnementPage() {
                   <Star className="w-5 h-5 text-violet-600 fill-violet-600" />
                   Plan Premium
                 </h2>
+                {/* ✅ Prix en dollars */}
                 <p className="text-gray-900 font-black text-2xl mt-0.5">
-                  10 000 FCFA
+                  10$
                   <span className="text-sm font-normal text-gray-500"> / mois</span>
                 </p>
               </div>
@@ -194,10 +194,10 @@ export default function AbonnementPage() {
               )}
             </div>
 
-            {/* Fonctionnalités premium */}
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
               Tout inclus — Illimité
             </p>
+
             <ul className="space-y-2.5 text-sm mb-6">
               {[
                 { label: "Factures illimitées", desc: "Aucune limite" },
@@ -215,22 +215,20 @@ export default function AbonnementPage() {
                   <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-medium text-gray-800">{f.label}</span>
-                    {f.desc && (
-                      <span className="text-gray-500"> — {f.desc}</span>
-                    )}
+                    {f.desc && <span className="text-gray-500"> — {f.desc}</span>}
                   </div>
                 </li>
               ))}
             </ul>
 
-            {/* ── Bouton abonnement (si pas premium) ── */}
+            {/* ── Bouton abonnement ── */}
             {!isPremium && (
               <div className="space-y-3">
                 <button
                   onClick={() => alert("Paiement en cours d'intégration. Bientôt disponible !")}
                   className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
                   <Zap className="w-4 h-4" />
-                  S'abonner — 10 000 FCFA / mois
+                  S'abonner — 10$ / mois
                 </button>
 
                 {/* Moyens de paiement */}
@@ -270,48 +268,6 @@ export default function AbonnementPage() {
                 </p>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* ── Tableau comparatif ── */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
-            <p className="font-black text-gray-800 text-sm">Comparatif des plans</p>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {[
-              { feature: "Factures", gratuit: "5 max", premium: "Illimité" },
-              { feature: "Coffre-fort", gratuit: "10 max", premium: "Illimité" },
-              { feature: "Liens & Contacts", gratuit: "Illimité", premium: "Illimité" },
-              { feature: "Boutique", gratuit: "❌", premium: "✅" },
-              { feature: "Entrées & Dépenses", gratuit: "❌", premium: "✅ Illimité" },
-              { feature: "Investissements", gratuit: "❌", premium: "✅ Illimité" },
-              { feature: "Prêts & Dettes", gratuit: "❌", premium: "✅ Illimité" },
-              { feature: "Médias", gratuit: "❌", premium: "✅ Illimité" },
-              { feature: "Marché Immobilier", gratuit: "❌", premium: "✅" },
-              { feature: "Badge Premium", gratuit: "❌", premium: "✅ Badge bleu" },
-            ].map((row) => (
-              <div key={row.feature} className="grid grid-cols-3 px-5 py-3 text-sm">
-                <span className="font-medium text-gray-700">{row.feature}</span>
-                <span className={`text-center text-xs font-semibold ${
-                  row.gratuit === "❌" ? "text-red-400" :
-                  row.gratuit === "Illimité" ? "text-green-600" : "text-orange-600"
-                }`}>
-                  {row.gratuit}
-                </span>
-                <span className={`text-center text-xs font-semibold ${
-                  row.premium.includes("✅") ? "text-violet-600" : "text-gray-400"
-                }`}>
-                  {row.premium}
-                </span>
-              </div>
-            ))}
-            {/* Header tableau */}
-            <div className="grid grid-cols-3 px-5 py-2 bg-violet-50 border-t border-violet-100">
-              <span className="text-xs font-bold text-gray-500">Fonctionnalité</span>
-              <span className="text-center text-xs font-bold text-gray-500">Gratuit</span>
-              <span className="text-center text-xs font-bold text-violet-600">Premium</span>
-            </div>
           </div>
         </div>
 
