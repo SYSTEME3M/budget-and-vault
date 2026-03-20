@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
@@ -7,7 +7,7 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { clearSession, isAdminUser } from "@/lib/app-utils";
-import { logoutUser, getNexoraUser, isNexoraAdmin } from "@/lib/nexora-auth";
+import { logoutUser, getNexoraUser, isNexoraAdmin, refreshNexoraSession } from "@/lib/nexora-auth";
 import { Input } from "@/components/ui/input";
 import { ReactNode } from "react";
 import nexoraLogo from "@/assets/nexora-logo.png";
@@ -40,11 +40,15 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, searchQuery = "", onSearchChange }: AppLayoutProps) {
-  // ── TOUS les hooks EN PREMIER — jamais de return conditionnel avant ──
   const [sidebarOpen, setSidebarOpen]             = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // ── Refresh session au montage ──
+  useEffect(() => {
+    refreshNexoraSession();
+  }, []);
 
   const nexoraUser  = getNexoraUser();
   const adminUser   = isNexoraAdmin() || isAdminUser();
@@ -72,7 +76,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
     navigate("/login");
   };
 
-  // ── Return conditionnel APRÈS tous les hooks ──
+  // Return conditionnel APRÈS tous les hooks
   if (isAdminPage) {
     return <>{children}</>;
   }
@@ -94,11 +98,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
         <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-destructive flex-shrink-0" />
 
         {/* Profil */}
-        <Link
-          to="/profil"
-          onClick={() => setMobileSidebarOpen(false)}
-          className="flex items-center gap-3 px-3 py-3.5 border-b border-sidebar-border hover:bg-sidebar-accent transition-colors"
-        >
+        <Link to="/profil" onClick={() => setMobileSidebarOpen(false)}
+          className="flex items-center gap-3 px-3 py-3.5 border-b border-sidebar-border hover:bg-sidebar-accent transition-colors">
           <div className="relative flex-shrink-0">
             <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-accent/60">
               {nexoraUser?.avatar_url ? (
@@ -127,10 +128,8 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           {sidebarOpen && (
             <span className="font-display font-black text-xs text-sidebar-foreground tracking-widest flex-1">NEXORA</span>
           )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={`hidden lg:flex w-6 h-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors flex-shrink-0 ${!sidebarOpen ? "ml-0" : "ml-auto"}`}
-          >
+          <button onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={`hidden lg:flex w-6 h-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors flex-shrink-0 ${!sidebarOpen ? "ml-0" : "ml-auto"}`}>
             <ChevronRight className={`w-3.5 h-3.5 transition-transform ${sidebarOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
@@ -147,7 +146,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
                 location.pathname === "/entrees-depenses"
               ));
             const isAdminItem = path === "/admin";
-
             return (
               <div key={path}>
                 {isAdminItem && (
@@ -160,9 +158,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
                     )}
                   </div>
                 )}
-                <Link
-                  to={path}
-                  onClick={() => setMobileSidebarOpen(false)}
+                <Link to={path} onClick={() => setMobileSidebarOpen(false)}
                   title={!sidebarOpen ? label : undefined}
                   className={`
                     flex items-center gap-3 rounded-xl transition-all duration-150
@@ -171,8 +167,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
                       ? "bg-accent text-accent-foreground font-semibold shadow-sm"
                       : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }
-                  `}
-                >
+                  `}>
                   <div className={`
                     flex items-center justify-center rounded-lg flex-shrink-0
                     ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}
@@ -190,15 +185,12 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
 
         {/* Logout */}
         <div className="p-2.5 border-t border-sidebar-border">
-          <button
-            onClick={handleLogout}
-            title="Déconnexion"
+          <button onClick={handleLogout} title="Déconnexion"
             className={`
               w-full flex items-center gap-3 rounded-xl text-sidebar-foreground/70
               hover:bg-destructive/20 hover:text-red-200 transition-colors
               ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
-            `}
-          >
+            `}>
             <div className={`flex items-center justify-center rounded-lg flex-shrink-0 bg-red-500/10 ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}`}>
               <LogOut className={`text-red-300 flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"}`} />
             </div>
@@ -212,19 +204,15 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
 
         {/* Header */}
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 lg:px-6 h-14 flex items-center gap-3 shadow-sm">
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
-          >
+          <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
             {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           {canGoBack && (
-            <button
-              onClick={() => navigate(-1)}
+            <button onClick={() => navigate(-1)}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
-              title="Retour"
-            >
+              title="Retour">
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
@@ -246,7 +234,7 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
               <Input
                 placeholder="Rechercher..."
                 value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={e => onSearchChange(e.target.value)}
                 className="pl-9 h-8 bg-muted border-0 focus:bg-card text-sm rounded-full"
               />
             </div>
