@@ -42,7 +42,6 @@ export async function registerUser(data: {
   email: string;
   password: string;
 }): Promise<{ success: boolean; error?: string }> {
-  // Vérifier unicité username
   const { data: existingUser } = await supabase
     .from("nexora_users" as any)
     .select("id")
@@ -53,7 +52,6 @@ export async function registerUser(data: {
     return { success: false, error: "Ce nom d'utilisateur est déjà pris." };
   }
 
-  // Vérifier unicité email
   const { data: existingEmail } = await supabase
     .from("nexora_users" as any)
     .select("id")
@@ -85,13 +83,12 @@ export async function registerUser(data: {
 
 // ─── Connexion ────────────────────────────────────────────────────────────────
 export async function loginUser(data: {
-  identifier: string; // username ou email
+  identifier: string;
   password: string;
   remember?: boolean;
 }): Promise<{ success: boolean; user?: NexoraUser; error?: string }> {
   const hash = await hashPassword(data.password);
 
-  // Chercher par username ou email
   const { data: user } = await supabase
     .from("nexora_users" as any)
     .select("*")
@@ -107,7 +104,6 @@ export async function loginUser(data: {
     };
   }
 
-  // Initialiser le hash admin si c'est le 1er login
   if ((user as any).password_hash === "INIT" && (user as any).is_admin) {
     const adminHash = await hashPassword("55237685N");
     await supabase
@@ -116,7 +112,20 @@ export async function loginUser(data: {
       .eq("id", (user as any).id);
   }
 
-  // Créer session
+  // Vérifier si le compte est suspendu ou bloqué
+  if ((user as any).status === "suspendu") {
+    return {
+      success: false,
+      error: `Votre compte est suspendu. Motif : ${(user as any).suspended_reason || "Contactez l'administrateur."}`,
+    };
+  }
+  if ((user as any).status === "bloque") {
+    return {
+      success: false,
+      error: `Votre compte est bloqué. Motif : ${(user as any).blocked_reason || "Contactez l'administrateur."}`,
+    };
+  }
+
   const token = generateToken();
   const expires_at = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
 
@@ -127,7 +136,6 @@ export async function loginUser(data: {
     is_admin_session: (user as any).is_admin,
   });
 
-  // Stocker en local
   const nexoraUser: NexoraUser = {
     id: (user as any).id,
     nom_prenom: (user as any).nom_prenom,
@@ -199,34 +207,82 @@ export function hasNexoraPremium(): boolean {
   return user?.plan === "premium" || user?.plan === "admin";
 }
 
+// ─── Rafraîchir la session depuis Supabase ────────────────────────────────────
+// Appelé à chaque chargement de page pour synchroniser les changements admin
+export async function refreshNexoraSession(): Promise<void> {
+  try {
+    const token =
+      localStorage.getItem(NEXORA_SESSION_KEY) ||
+      sessionStorage.getItem(NEXORA_SESSION_KEY);
+    if (!token) return;
+
+    // Récupérer le user_id depuis la session active
+    const { data: session } = await supabase
+      .from("nexora_sessions" as any)
+      .select("user_id, expires_at")
+      .eq("session_token", token)
+      .maybeSingle();
+
+    if (!session) return;
+
+    // Vérifier si la session n'est pas expirée
+    if (new Date((session as any).expires_at) < new Date()) return;
+
+    // Recharger les données fraîches depuis la base
+    const { data: user } = await supabase
+      .from("nexora_users" as any)
+      .select("id, nom_prenom, username, email, avatar_url, is_admin, plan, badge_premium, is_active, status")
+      .eq("id", (session as any).user_id)
+      .maybeSingle();
+
+    if (!user) return;
+
+    // Si le compte est suspendu ou bloqué → déconnecter
+    if ((user as any).status === "suspendu" || (user as any).status === "bloque" || !(user as any).is_active) {
+      await logoutUser();
+      window.location.href = "/login";
+      return;
+    }
+
+    const nexoraUser: NexoraUser = {
+      id: (user as any).id,
+      nom_prenom: (user as any).nom_prenom,
+      username: (user as any).username,
+      email: (user as any).email,
+      avatar_url: (user as any).avatar_url,
+      is_admin: (user as any).is_admin,
+      plan: (user as any).plan,
+      badge_premium: (user as any).badge_premium,
+    };
+
+    // Mettre à jour le storage avec les données fraîches
+    if (localStorage.getItem(NEXORA_SESSION_KEY)) {
+      localStorage.setItem(NEXORA_USER_KEY, JSON.stringify(nexoraUser));
+    }
+    if (sessionStorage.getItem(NEXORA_SESSION_KEY)) {
+      sessionStorage.setItem(NEXORA_USER_KEY, JSON.stringify(nexoraUser));
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
 // ─── Validation mot de passe ─────────────────────────────────────────────────
 export function validatePassword(password: string): {
   valid: boolean;
   error?: string;
 } {
   if (password.length < 8) {
-    return {
-      valid: false,
-      error: "Le mot de passe doit contenir au moins 8 caractères.",
-    };
+    return { valid: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
   }
   if (!/[a-zA-Z]/.test(password)) {
-    return {
-      valid: false,
-      error: "Le mot de passe doit contenir au moins une lettre.",
-    };
+    return { valid: false, error: "Le mot de passe doit contenir au moins une lettre." };
   }
   if (!/[0-9]/.test(password)) {
-    return {
-      valid: false,
-      error: "Le mot de passe doit contenir au moins un chiffre.",
-    };
+    return { valid: false, error: "Le mot de passe doit contenir au moins un chiffre." };
   }
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    return {
-      valid: false,
-      error: "Le mot de passe doit contenir au moins un caractère spécial.",
-    };
+    return { valid: false, error: "Le mot de passe doit contenir au moins un caractère spécial." };
   }
   return { valid: true };
 }
@@ -247,7 +303,7 @@ export async function initAdminUser(): Promise<void> {
         .update({ password_hash: adminHash })
         .eq("id", (admin as any).id);
     }
-    
+
     if (!admin) {
       const adminHash = await hashPassword("55237685N");
       await supabase.from("nexora_users" as any).insert({
@@ -260,7 +316,7 @@ export async function initAdminUser(): Promise<void> {
         badge_premium: true,
       });
     }
-  } catch (e) {
+  } catch {
     // Silently fail
   }
 }
