@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Annonce } from "../types";
-import { getMesAnnonces, deleteAnnonce } from "../hooks/useAnnonces";
-import AnnonceForm from "../components/AnnonceForm";
+import { Annonce } from "@/types";
+import { getMesAnnonces, deleteAnnonce } from "@/hooks/useAnnonces";
+import AnnonceForm from "@/components/AnnonceForm";
 
 const USER_ID = "user-123";
 

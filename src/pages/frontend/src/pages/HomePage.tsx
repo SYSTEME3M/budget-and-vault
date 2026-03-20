@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Building2, TrendingUp, MapPin } from "lucide-react";
-import AnnonceCard from "../components/AnnonceCard";
-import FiltresComponent from "../components/Filtres";
-import AnnonceForm from "../components/AnnonceForm";
-import { useAnnonces } from "../hooks/useAnnonces";
-import { Filtres } from "../types";
+import AnnonceCard from "@/components/AnnonceCard";
+import FiltresComponent from "@/components/Filtres";
+import AnnonceForm from "@/components/AnnonceForm";
+import { useAnnonces } from "@/hooks/useAnnonces";
+import { Filtres } from "@/types";
 
 export default function HomePage() {
   const [searchParams] = useSearchParams();
