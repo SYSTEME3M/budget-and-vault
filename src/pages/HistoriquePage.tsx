@@ -118,34 +118,36 @@ export default function HistoriquePage() {
 
         {/* Period selector */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {(["semaine", "mois", "annee"] as PeriodType[]).map(p => (
-              <button key={p} onClick={() => setPeriod(p)}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${period === p ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary/10"}`}>
-                {p === "semaine" ? "📅 Semaine" : p === "mois" ? "📆 Mois" : "🗓️ Année"}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
-              {allYears.length > 0 ? allYears.map(y => <option key={y} value={y}>{y}</option>)
-                : <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>}
-            </select>
-            {period === "mois" && (
-              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
-                {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <div className="flex gap-2">
+              {(["semaine", "mois", "annee"] as PeriodType[]).map(p => (
+                <button key={p} onClick={() => setPeriod(p)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${period === p ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-primary/10"}`}>
+                  {p === "semaine" ? "📅 Semaine" : p === "mois" ? "📆 Mois" : "🗓️ Année"}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 items-center">
+              {period === "semaine" && (
+                <select value={selectedWeek} onChange={e => setSelectedWeek(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
+                  {allWeeks.length > 0 ? allWeeks.map(w => {
+                    const mon = getMondayOfWeek(w, selectedYear);
+                    return <option key={w} value={w}>Semaine {w} — {mon.toLocaleDateString("fr-FR")}</option>;
+                  }) : <option value={selectedWeek}>Semaine {selectedWeek}</option>}
+                </select>
+              )}
+              {period === "mois" && (
+                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
+                  {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                </select>
+              )}
+              <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
+                {allYears.length > 0 ? allYears.map(y => <option key={y} value={y}>{y}</option>)
+                  : <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>}
               </select>
-            )}
-            {period === "semaine" && (
-              <select value={selectedWeek} onChange={e => setSelectedWeek(Number(e.target.value))} className="border border-border rounded-lg px-3 py-2 text-sm bg-card">
-                {allWeeks.length > 0 ? allWeeks.map(w => {
-                  const mon = getMondayOfWeek(w, selectedYear);
-                  return <option key={w} value={w}>Semaine {w} — {mon.toLocaleDateString("fr-FR")}</option>;
-                }) : <option value={selectedWeek}>Semaine {selectedWeek}</option>}
-              </select>
-            )}
-            <span className="text-sm font-bold text-primary bg-primary-bg px-3 py-1.5 rounded-full border border-primary/20">{periodLabel}</span>
+            </div>
           </div>
+          <span className="inline-block text-sm font-bold text-primary bg-primary-bg px-3 py-1.5 rounded-full border border-primary/20">{periodLabel}</span>
         </div>
 
         {/* Summary cards */}
