@@ -32,17 +32,14 @@ function PremiumBadge() {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "3px",
-        padding: "2px 7px",
+        justifyContent: "center",
+        width: "16px",
+        height: "16px",
         borderRadius: "999px",
-        fontSize: "10px",
-        fontWeight: 800,
-        color: "#fff",
         background: "linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)",
         boxShadow: "0 0 8px 2px rgba(34,197,94,0.7), 0 0 2px 0 rgba(34,197,94,0.4)",
         animation: "premiumPulse 2s ease-in-out infinite",
         flexShrink: 0,
-        letterSpacing: "0.03em",
         border: "1px solid rgba(255,255,255,0.3)",
         position: "relative" as const,
         overflow: "hidden",
@@ -53,13 +50,12 @@ function PremiumBadge() {
         position: "absolute",
         top: 0, left: "-60%",
         width: "40%", height: "100%",
-        background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+        background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
         animation: "shine 2.5s ease-in-out infinite",
         pointerEvents: "none",
       }} />
 
-      <BadgeCheck style={{ width: 11, height: 11, color: "#fff", flexShrink: 0 }} />
-      Premium
+      <BadgeCheck style={{ width: 10, height: 10, color: "#fff", flexShrink: 0 }} />
     </span>
   );
 }
