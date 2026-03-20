@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
-  Search, ChevronRight, TrendingUp, TrendingDown, History, 
+  Search, ChevronRight, TrendingUp, History,
   HandCoins, PiggyBank, ArrowLeft, Receipt, Store, BadgeCheck, Map
 } from "lucide-react";
 import { clearSession, isAdminUser } from "@/lib/app-utils";
@@ -13,20 +13,20 @@ import nexoraLogo from "@/assets/nexora-logo.png";
 
 const getNavItems = (isAdmin: boolean) => {
   const items = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-primary" },
-    { path: "/entrees-depenses", icon: TrendingUp, label: "Entrées & Dépenses", color: "text-green-400" },
-    { path: "/historique", icon: History, label: "Historique", color: "text-accent" },
-    { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300" },
-    { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300" },
-    { path: "/factures", icon: Receipt, label: "Factures", color: "text-purple-300" },
-    { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300" },
-    { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300" },
-    { path: "/boutique", icon: Store, label: "Nexora Shop", color: "text-pink-300" },
-    { path: "/immobilier", icon: Map, label: "Marché Immobilier", color: "text-blue-300" },
+    { path: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", color: "text-primary", bg: "bg-primary/10" },
+    { path: "/entrees-depenses", icon: TrendingUp, label: "Entrées & Dépenses", color: "text-green-400", bg: "bg-green-400/10" },
+    { path: "/historique", icon: History, label: "Historique", color: "text-accent", bg: "bg-accent/10" },
+    { path: "/prets", icon: HandCoins, label: "Prêts & Dettes", color: "text-orange-300", bg: "bg-orange-300/10" },
+    { path: "/investissements", icon: PiggyBank, label: "Investissements", color: "text-emerald-300", bg: "bg-emerald-300/10" },
+    { path: "/factures", icon: Receipt, label: "Factures", color: "text-purple-300", bg: "bg-purple-300/10" },
+    { path: "/coffre-fort", icon: Lock, label: "Coffre-fort", color: "text-yellow-300", bg: "bg-yellow-300/10" },
+    { path: "/liens", icon: Link2, label: "Liens & Contacts", color: "text-green-300", bg: "bg-green-300/10" },
+    { path: "/boutique", icon: Store, label: "Nexora Shop", color: "text-pink-300", bg: "bg-pink-300/10" },
+    { path: "/immobilier", icon: Map, label: "Marché Immobilier", color: "text-blue-300", bg: "bg-blue-300/10" },
   ];
 
   if (isAdmin) {
-    items.push({ path: "/medias", icon: Image, label: "Médias", color: "text-blue-300" });
+    items.push({ path: "/medias", icon: Image, label: "Médias", color: "text-sky-300", bg: "bg-sky-300/10" });
   }
 
   return items;
@@ -58,14 +58,13 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
     navigate("/login");
   };
 
-  const currentPage = navItems.find(i => 
-    i.path === location.pathname || 
+  const currentPage = navItems.find(i =>
+    i.path === location.pathname ||
     (i.path === "/boutique" && location.pathname.startsWith("/boutique"))
   );
   const canGoBack = location.pathname !== "/dashboard";
 
   return (
-    // ✅ CORRECTION 1 — bloquer tout débordement horizontal à la racine
     <div className="min-h-screen flex bg-muted/30 overflow-x-hidden max-w-[100vw]">
       {mobileSidebarOpen && (
         <div className="fixed inset-0 bg-foreground/30 z-20 lg:hidden"
@@ -75,19 +74,20 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
       <aside className={`
         fixed top-0 left-0 h-full z-30 bg-sidebar text-sidebar-foreground flex flex-col
         transition-all duration-300 shadow-brand-lg
-        ${sidebarOpen ? "w-56" : "w-14"}
+        ${sidebarOpen ? "w-60" : "w-[68px]"}
         ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
+        {/* Top gradient bar */}
         <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-destructive flex-shrink-0" />
 
-        {/* Logo + Profil en haut */}
+        {/* Profil */}
         <Link
           to="/profil"
           onClick={() => setMobileSidebarOpen(false)}
-          className="flex items-center gap-2.5 px-3 py-3 border-b border-sidebar-border hover:bg-sidebar-accent transition-colors"
+          className="flex items-center gap-3 px-3 py-3.5 border-b border-sidebar-border hover:bg-sidebar-accent transition-colors"
         >
           <div className="relative flex-shrink-0">
-            <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-accent">
+            <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-accent/60">
               {nexoraUser?.avatar_url ? (
                 <img src={nexoraUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -96,75 +96,103 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
                 </div>
               )}
             </div>
-            {hasBadge && (
-              <BadgeCheck className="absolute -bottom-1 -right-1 w-4 h-4 text-yellow-300 drop-shadow-sm" />
-            )}
           </div>
           {sidebarOpen && (
             <div className="min-w-0 flex-1">
-              <div className="font-display font-black text-sm text-sidebar-foreground truncate flex items-center gap-1">
+              <div className="font-display font-black text-sm text-sidebar-foreground truncate flex items-center gap-1.5">
                 {displayName.split(" ")[0]}
-                {hasBadge && <BadgeCheck className="w-3.5 h-3.5 text-yellow-300 flex-shrink-0" />}
+                {hasBadge && (
+                  <BadgeCheck className="w-4 h-4 text-green-400 flex-shrink-0" />
+                )}
               </div>
               <div className="text-xs text-sidebar-foreground/50 truncate">{displayRole}</div>
             </div>
           )}
         </Link>
 
-        {/* Logo Nexora */}
-        <div className={`flex items-center gap-2 px-3 py-2 border-b border-sidebar-border ${sidebarOpen ? "" : "justify-center"}`}>
+        {/* Logo Nexora + toggle */}
+        <div className={`flex items-center gap-2.5 px-3 py-2.5 border-b border-sidebar-border ${!sidebarOpen ? "justify-center" : ""}`}>
           <img src={nexoraLogo} alt="Nexora" className="w-6 h-6 object-contain flex-shrink-0" />
           {sidebarOpen && (
-            <span className="font-display font-black text-xs text-sidebar-foreground tracking-widest">NEXORA</span>
+            <span className="font-display font-black text-xs text-sidebar-foreground tracking-widest flex-1">NEXORA</span>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="ml-auto hidden lg:flex w-6 h-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors flex-shrink-0"
+            className={`hidden lg:flex w-6 h-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors flex-shrink-0 ${!sidebarOpen ? "ml-0" : "ml-auto"}`}
           >
             <ChevronRight className={`w-3.5 h-3.5 transition-transform ${sidebarOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
 
-        <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ path, icon: Icon, label, color }) => {
-            const active = location.pathname === path ||
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+          {navItems.map(({ path, icon: Icon, label, color, bg }) => {
+            const active =
+              location.pathname === path ||
               (path === "/boutique" && location.pathname.startsWith("/boutique")) ||
-              (path === "/entrees-depenses" && (location.pathname === "/entrees" || location.pathname === "/depenses" || location.pathname === "/entrees-depenses"));
+              (path === "/entrees-depenses" && (
+                location.pathname === "/entrees" ||
+                location.pathname === "/depenses" ||
+                location.pathname === "/entrees-depenses"
+              ));
+
             return (
               <Link
                 key={path}
                 to={path}
                 onClick={() => setMobileSidebarOpen(false)}
+                title={!sidebarOpen ? label : undefined}
                 className={`
-                  flex items-center gap-3 px-2.5 py-2 rounded-lg transition-all duration-150
+                  flex items-center gap-3 rounded-xl transition-all duration-150 group
+                  ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
                   ${active
                     ? "bg-accent text-accent-foreground font-semibold shadow-sm"
                     : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   }
                 `}
-                title={!sidebarOpen ? label : undefined}
               >
-                <Icon className={`w-4 h-4 flex-shrink-0 ${active ? "text-accent-foreground" : color}`} />
-                {sidebarOpen && <span className="text-sm truncate">{label}</span>}
+                {/* Icon container — toujours visible */}
+                <div className={`
+                  flex items-center justify-center rounded-lg flex-shrink-0
+                  ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}
+                  ${active ? "bg-white/20" : bg}
+                  transition-all duration-150
+                `}>
+                  <Icon className={`flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"} ${active ? "text-accent-foreground" : color}`} />
+                </div>
+
+                {sidebarOpen && (
+                  <span className="text-sm truncate">{label}</span>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-2.5 border-t border-sidebar-border space-y-1">
+        {/* Logout */}
+        <div className="p-2.5 border-t border-sidebar-border">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-red-200 transition-colors"
             title="Déconnexion"
+            className={`
+              w-full flex items-center gap-3 rounded-xl text-sidebar-foreground/70
+              hover:bg-destructive/20 hover:text-red-200 transition-colors
+              ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
+            `}
           >
-            <LogOut className="w-4 h-4 flex-shrink-0 text-red-300" />
+            <div className={`
+              flex items-center justify-center rounded-lg flex-shrink-0 bg-red-500/10
+              ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}
+            `}>
+              <LogOut className={`text-red-300 flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"}`} />
+            </div>
             {sidebarOpen && <span className="text-sm">Déconnexion</span>}
           </button>
         </div>
       </aside>
 
-      {/* ✅ CORRECTION 2 — bloquer débordement sur le conteneur principal */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden min-w-0 w-0 ${sidebarOpen ? "lg:ml-56" : "lg:ml-14"}`}>
+      {/* Main */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden min-w-0 w-0 ${sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]"}`}>
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 lg:px-6 h-14 flex items-center gap-3 shadow-sm">
           <button
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -184,11 +212,16 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           )}
 
           <div className="flex-1 min-w-0 flex items-center gap-2">
+            {currentPage && (
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${currentPage.bg}`}>
+                <currentPage.icon className={`w-4 h-4 ${currentPage.color}`} />
+              </div>
+            )}
             <h2 className="font-display font-bold text-foreground text-base truncate">
               {currentPage?.label || "NEXORA"}
             </h2>
           </div>
-          
+
           {onSearchChange && (
             <div className="relative hidden sm:block w-52">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -202,7 +235,6 @@ export default function AppLayout({ children, searchQuery = "", onSearchChange }
           )}
         </header>
 
-        {/* ✅ CORRECTION 3 — bloquer débordement dans le main */}
         <main className="flex-1 p-3 lg:p-5 overflow-x-hidden min-w-0 max-w-full">{children}</main>
 
         <footer className="py-2.5 px-6 border-t border-border text-center text-xs text-muted-foreground">
