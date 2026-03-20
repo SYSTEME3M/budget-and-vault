@@ -1,115 +1,230 @@
 import AppLayout from "@/components/AppLayout";
-import { BadgeCheck, Zap, Crown, CheckCircle2, Star } from "lucide-react";
-import { getNexoraUser } from "@/lib/nexora-auth";
-import nexoraLogo from "@/assets/nexora-logo.png";
+import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone } from "lucide-react";
+
+// ── Simuler l'utilisateur connecté (à remplacer par votre vrai système auth)
+const getCurrentUser = () => {
+  const stored = localStorage.getItem("nexora_user");
+  return stored ? JSON.parse(stored) : null;
+};
 
 export default function AbonnementPage() {
-  const user = getNexoraUser();
-  const isPremium = user?.plan === "premium" || user?.plan === "admin";
+  const user = getCurrentUser();
+  const isAdmin = user?.role === "admin";
+  const isPremium = user?.abonnement === "premium" || isAdmin;
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in-up">
-        {/* Header */}
+      <div className="max-w-2xl mx-auto space-y-6 pb-10">
+
+        {/* ── En-tête ── */}
         <div className="text-center">
-          <img src={nexoraLogo} alt="Nexora" className="w-16 h-16 object-contain mx-auto mb-3" />
-          <h1 className="font-display text-2xl font-black">Plans & Abonnements</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+            <Star className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-black text-gray-900">Plans & Abonnements</h1>
+          <p className="text-gray-500 text-sm mt-1">
             Choisissez le plan qui correspond à vos besoins
           </p>
         </div>
 
-        {isPremium && (
+        {/* ── Bannière Admin ── */}
+        {isAdmin && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+            <Crown className="w-6 h-6 text-amber-600 flex-shrink-0" />
+            <div>
+              <div className="font-bold text-amber-700 flex items-center gap-2">
+                Accès Administrateur
+                <span className="inline-flex items-center gap-1 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  <BadgeCheck className="w-3 h-3" /> Admin
+                </span>
+              </div>
+              <div className="text-sm text-amber-600">
+                Toutes les fonctionnalités sont gratuites et illimitées pour vous.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Bannière Premium actif ── */}
+        {isPremium && !isAdmin && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
             <BadgeCheck className="w-6 h-6 text-green-600 flex-shrink-0" />
             <div>
-              <div className="font-bold text-green-700">Vous êtes {user?.plan === "admin" ? "Administrateur" : "Premium"}</div>
-              <div className="text-sm text-green-600">Vous bénéficiez de toutes les fonctionnalités.</div>
+              <div className="font-bold text-green-700 flex items-center gap-2">
+                Vous êtes Premium
+                <span className="inline-flex items-center gap-1 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  <BadgeCheck className="w-3 h-3" /> Premium
+                </span>
+              </div>
+              <div className="text-sm text-green-600">
+                Vous bénéficiez de toutes les fonctionnalités illimitées.
+              </div>
             </div>
           </div>
         )}
 
-        {/* Plan Gratuit */}
-        <div className={`bg-card border-2 rounded-2xl p-6 transition-all ${!isPremium ? "border-primary shadow-brand" : "border-border"}`}>
+        {/* ══════════════════════════════
+            PLAN GRATUIT
+        ══════════════════════════════ */}
+        <div className={`bg-white border-2 rounded-2xl p-6 transition-all shadow-sm ${
+          !isPremium ? "border-violet-500 shadow-violet-100" : "border-gray-200"
+        }`}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-bold text-lg flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-500" /> Plan Gratuit
+              <h2 className="font-black text-lg flex items-center gap-2 text-gray-900">
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                Plan Gratuit
               </h2>
-              <p className="text-muted-foreground text-sm">0$ / mois</p>
+              <p className="text-gray-500 text-sm font-semibold">0 FCFA / mois</p>
             </div>
             {!isPremium && (
-              <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">Votre plan</span>
+              <span className="bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                Votre plan actuel
+              </span>
             )}
           </div>
-          <ul className="space-y-2 text-sm">
+
+          <ul className="space-y-2.5 text-sm">
             {[
-              "Boutique Nexora Shop",
-              "Factures (illimitées)",
-              "Coffre-fort (10 comptes max)",
-              "Liens & Contacts",
-              "Tableau de bord",
-              "Historique",
+              { label: "Boutique Nexora", desc: "Créer et gérer votre boutique" },
+              { label: "Factures illimitées", desc: "Créer autant de factures que vous voulez" },
+              { label: "Coffre-fort (10 comptes max)", desc: "Stocker vos accès en sécurité" },
+              { label: "Liens & Contacts", desc: "Gérer vos contacts et liens utiles" },
+              { label: "Tableau de bord", desc: "Vue d'ensemble de vos finances" },
+              { label: "Historique", desc: "Consulter l'historique de vos opérations" },
             ].map((f) => (
-              <li key={f} className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" /> {f}
+              <li key={f.label} className="flex items-start gap-2 text-gray-600">
+                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-medium text-gray-700">{f.label}</span>
+                  <span className="text-gray-400"> — {f.desc}</span>
+                </div>
               </li>
             ))}
+            <li className="flex items-start gap-2 text-gray-400">
+              <CheckCircle2 className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" />
+              <span className="line-through">Marché Immobilier (Premium uniquement)</span>
+            </li>
           </ul>
         </div>
 
-        {/* Plan Premium */}
-        <div className={`border-2 rounded-2xl p-6 relative overflow-hidden transition-all ${isPremium && user?.plan !== "admin" ? "border-primary bg-primary-bg shadow-brand-lg" : "border-accent bg-accent-bg"}`}>
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-accent/20 rounded-full" />
+        {/* ══════════════════════════════
+            PLAN PREMIUM
+        ══════════════════════════════ */}
+        <div className={`border-2 rounded-2xl p-6 relative overflow-hidden transition-all ${
+          isPremium && !isAdmin
+            ? "border-violet-500 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-lg shadow-violet-100"
+            : "border-violet-200 bg-gradient-to-br from-violet-50/50 to-indigo-50/50"
+        }`}>
+          {/* Décoration */}
+          <div className="absolute -top-6 -right-6 w-28 h-28 bg-violet-200/30 rounded-full" />
+          <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-indigo-200/30 rounded-full" />
+
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-bold text-lg flex items-center gap-2">
-                  <Star className="w-5 h-5 text-accent fill-accent" /> Plan Premium
+                <h2 className="font-black text-lg flex items-center gap-2 text-gray-900">
+                  <Star className="w-5 h-5 text-violet-600 fill-violet-600" />
+                  Plan Premium
                 </h2>
-                <p className="text-foreground font-black text-2xl">10$ <span className="text-sm font-normal text-muted-foreground">/ mois</span></p>
+                <p className="text-gray-900 font-black text-2xl mt-0.5">
+                  10 000 FCFA
+                  <span className="text-sm font-normal text-gray-500"> / mois</span>
+                </p>
               </div>
-              {isPremium && user?.plan !== "admin" && (
-                <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">Votre plan</span>
+              {isPremium && !isAdmin && (
+                <span className="bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  Votre plan actuel
+                </span>
+              )}
+              {isAdmin && (
+                <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                  <Crown className="w-3 h-3" /> Gratuit Admin
+                </span>
               )}
             </div>
-            <ul className="space-y-2 text-sm mb-6">
+
+            <ul className="space-y-2.5 text-sm mb-6">
               {[
-                "Tout du plan Gratuit",
-                "Coffre-fort illimité",
-                "Entrées & Dépenses illimitées",
-                "Investissements illimités",
-                "Prêts & Dettes illimités",
-                "Marché Immobilier (publier)",
-                "Badge Premium ✓ sur le profil",
+                { label: "Tout du Plan Gratuit inclus", desc: "" },
+                { label: "Coffre-fort illimité", desc: "Aucune limite de comptes" },
+                { label: "Entrées & Dépenses illimitées", desc: "Suivi financier complet" },
+                { label: "Investissements illimités", desc: "Gérer tous vos investissements" },
+                { label: "Prêts & Dettes illimités", desc: "Suivre tous vos prêts" },
+                { label: "Médias illimités", desc: "Stocker tous vos fichiers" },
+                { label: "🏠 Marché Immobilier", desc: "Publier des annonces immobilières" },
+                { label: "Badge Premium ✓ sur le profil", desc: "Badge bleu visible sur votre profil" },
               ].map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" /> {f}
+                <li key={f.label} className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-medium text-gray-800">{f.label}</span>
+                    {f.desc && <span className="text-gray-500"> — {f.desc}</span>}
+                  </div>
                 </li>
               ))}
             </ul>
-            <button
-              className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-              onClick={() => alert("Paiement en cours d'intégration. Bientôt disponible !")}
-            >
-              <Zap className="w-4 h-4" /> S'abonner — 10$/mois
-            </button>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Paiement par Mobile Money et Carte Bancaire (bientôt)
-            </p>
+
+            {/* Bouton abonnement */}
+            {!isPremium && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => alert("Paiement en cours d'intégration. Bientôt disponible !")}
+                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
+                  <Zap className="w-4 h-4" />
+                  S'abonner — 10 000 FCFA/mois
+                </button>
+
+                {/* Moyens de paiement */}
+                <div className="bg-white/70 rounded-xl p-3 border border-violet-100">
+                  <p className="text-xs font-semibold text-gray-600 mb-2 text-center">
+                    Moyens de paiement disponibles
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-100">
+                      <Smartphone className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-gray-700">Mobile Money</p>
+                        <p className="text-xs text-gray-400">MTN, Wave, Orange...</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-100">
+                      <CreditCard className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-gray-700">Carte Bancaire</p>
+                        <p className="text-xs text-gray-400">Visa, Mastercard...</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 text-center mt-2">
+                    🔒 Paiement sécurisé — Intégration API en cours
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isPremium && !isAdmin && (
+              <div className="bg-white/70 rounded-xl p-3 border border-green-200 text-center">
+                <p className="text-sm font-bold text-green-700 flex items-center justify-center gap-2">
+                  <BadgeCheck className="w-4 h-4" />
+                  Abonnement actif — Merci pour votre confiance !
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Plan Admin info */}
-        {user?.plan === "admin" && (
-          <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-            <Crown className="w-6 h-6 text-accent flex-shrink-0" />
-            <div>
-              <div className="font-bold">Accès Administrateur</div>
-              <div className="text-sm text-muted-foreground">Toutes les fonctionnalités sont gratuites pour vous.</div>
-            </div>
+        {/* ── Note admin ── */}
+        {isAdmin && (
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-center gap-3">
+            <Crown className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <p className="text-sm text-amber-700">
+              En tant qu'administrateur, vous avez accès à toutes les fonctionnalités
+              gratuitement et de façon permanente.
+            </p>
           </div>
         )}
+
       </div>
     </AppLayout>
   );
