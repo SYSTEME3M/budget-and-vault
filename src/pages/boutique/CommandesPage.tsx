@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import BoutiqueLayout from "@/components/BoutiqueLayout";
+import { hasNexoraPremium } from "@/lib/nexora-auth";
+import { useNavigate } from "react-router-dom";
 import {
   ShoppingBag, ChevronDown, ChevronUp, Phone,
   MapPin, Clock, CheckCircle, Truck, Package,
-  XCircle, Search, MessageCircle
+  XCircle, Search, MessageCircle, Crown
 } from "lucide-react";
 
 type StatutCommande = "nouvelle" | "confirmee" | "en_preparation" | "expediee" | "livree" | "annulee";
@@ -44,19 +46,19 @@ interface Commande {
 }
 
 const STATUTS: Record<StatutCommande, { label: string; color: string; bg: string; icon: any }> = {
-  nouvelle: { label: "Nouvelle", color: "text-blue-700", bg: "bg-blue-100", icon: ShoppingBag },
-  confirmee: { label: "Confirmée", color: "text-purple-700", bg: "bg-purple-100", icon: CheckCircle },
-  en_preparation: { label: "En préparation", color: "text-yellow-700", bg: "bg-yellow-100", icon: Package },
-  expediee: { label: "Expédiée", color: "text-orange-700", bg: "bg-orange-100", icon: Truck },
-  livree: { label: "Livrée", color: "text-green-700", bg: "bg-green-100", icon: CheckCircle },
-  annulee: { label: "Annulée", color: "text-red-700", bg: "bg-red-100", icon: XCircle },
+  nouvelle:       { label: "Nouvelle",        color: "text-blue-700",   bg: "bg-blue-100",   icon: ShoppingBag },
+  confirmee:      { label: "Confirmée",        color: "text-purple-700", bg: "bg-purple-100", icon: CheckCircle },
+  en_preparation: { label: "En préparation",   color: "text-yellow-700", bg: "bg-yellow-100", icon: Package },
+  expediee:       { label: "Expédiée",         color: "text-orange-700", bg: "bg-orange-100", icon: Truck },
+  livree:         { label: "Livrée",           color: "text-green-700",  bg: "bg-green-100",  icon: CheckCircle },
+  annulee:        { label: "Annulée",          color: "text-red-700",    bg: "bg-red-100",    icon: XCircle },
 };
 
 const STATUTS_PAIEMENT: Record<StatutPaiement, { label: string; color: string; bg: string }> = {
   en_attente: { label: "En attente", color: "text-yellow-700", bg: "bg-yellow-100" },
-  paye: { label: "Payé", color: "text-green-700", bg: "bg-green-100" },
-  echoue: { label: "Échoué", color: "text-red-700", bg: "bg-red-100" },
-  rembourse: { label: "Remboursé", color: "text-gray-700", bg: "bg-gray-100" },
+  paye:       { label: "Payé",       color: "text-green-700",  bg: "bg-green-100"  },
+  echoue:     { label: "Échoué",     color: "text-red-700",    bg: "bg-red-100"    },
+  rembourse:  { label: "Remboursé",  color: "text-gray-700",   bg: "bg-gray-100"   },
 };
 
 const ORDRE_STATUTS: StatutCommande[] = [
@@ -75,8 +77,11 @@ function formatDate(dt: string): string {
   });
 }
 
-export default function BoutiqueCommandesPage() {
+export default function CommandesPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isPremium = hasNexoraPremium();
+
   const [boutique, setBoutique] = useState<any>(null);
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,15 +112,47 @@ export default function BoutiqueCommandesPage() {
 
   useEffect(() => { load(); }, []);
 
+  // ── Mur premium ──────────────────────────────────────────────────────────────
+  if (!isPremium) {
+    return (
+      <BoutiqueLayout boutiqueName="Nexora Shop">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center mb-6 shadow-lg">
+            <Crown className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-800 mb-2">Fonctionnalité Premium</h2>
+          <p className="text-gray-500 text-sm mb-1 max-w-xs">
+            La boutique est réservée aux membres <span className="font-bold text-yellow-600">Premium</span>.
+          </p>
+          <p className="text-gray-400 text-xs mb-8 max-w-xs">
+            Passez au plan Premium pour gérer vos commandes et votre boutique.
+          </p>
+          <button
+            onClick={() => navigate("/boutique/parametres")}
+            className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-all"
+          >
+            <Crown className="w-4 h-4" /> Passer à Premium
+          </button>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Retour au tableau de bord
+          </button>
+        </div>
+      </BoutiqueLayout>
+    );
+  }
+
   const changeStatut = async (id: string, statut: StatutCommande) => {
     await supabase.from("commandes" as any).update({ statut }).eq("id", id);
-    toast({ title: `✅ Statut : ${STATUTS[statut].label}` });
+    toast({ title: `Statut mis à jour : ${STATUTS[statut].label}` });
     load();
   };
 
   const changePaiement = async (id: string, statut_paiement: StatutPaiement) => {
     await supabase.from("commandes" as any).update({ statut_paiement }).eq("id", id);
-    toast({ title: `✅ Paiement : ${STATUTS_PAIEMENT[statut_paiement].label}` });
+    toast({ title: `Paiement mis à jour : ${STATUTS_PAIEMENT[statut_paiement].label}` });
     load();
   };
 
@@ -127,7 +164,6 @@ export default function BoutiqueCommandesPage() {
     return matchSearch && matchStatut && matchPaiement;
   });
 
-  // Stats rapides
   const stats = {
     total: commandes.length,
     nouvelles: commandes.filter(c => c.statut === "nouvelle").length,
@@ -138,6 +174,7 @@ export default function BoutiqueCommandesPage() {
   return (
     <BoutiqueLayout boutiqueName={boutique?.nom} boutiqueSlug={boutique?.slug}>
       <div className="space-y-5 pb-10">
+
         {/* Header */}
         <div>
           <h1 className="text-2xl font-black text-gray-800">Commandes</h1>
@@ -147,7 +184,7 @@ export default function BoutiqueCommandesPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-            <p className="text-xs text-blue-600 font-medium">🆕 Nouvelles</p>
+            <p className="text-xs text-blue-600 font-medium">Nouvelles</p>
             <p className="text-3xl font-black text-blue-700">{stats.nouvelles}</p>
           </div>
           <div className="bg-green-50 border border-green-100 rounded-2xl p-4">
@@ -155,7 +192,7 @@ export default function BoutiqueCommandesPage() {
             <p className="text-3xl font-black text-green-700">{stats.livrees}</p>
           </div>
           <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4 col-span-2">
-            <p className="text-xs text-pink-600 font-medium">💰 Chiffre d'affaires</p>
+            <p className="text-xs text-pink-600 font-medium">Chiffre d'affaires</p>
             <p className="text-2xl font-black text-pink-700">
               {Math.round(stats.chiffre).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} {boutique?.devise || "FCFA"}
             </p>
@@ -209,7 +246,6 @@ export default function BoutiqueCommandesPage() {
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        {/* Numéro + badges */}
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-pink-600 text-sm">#{cmd.numero}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${STATUTS[cmd.statut].bg} ${STATUTS[cmd.statut].color}`}>
@@ -221,18 +257,11 @@ export default function BoutiqueCommandesPage() {
                           </span>
                         </div>
 
-                        {/* Client */}
                         <p className="font-semibold text-gray-800 mt-1">{cmd.client_nom}</p>
                         <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />{cmd.client_telephone}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />{cmd.client_ville}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />{formatDate(cmd.created_at)}
-                          </span>
+                          <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{cmd.client_telephone}</span>
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{cmd.client_ville}</span>
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(cmd.created_at)}</span>
                         </div>
 
                         <div className="text-lg font-black text-pink-600 mt-1">
@@ -250,7 +279,6 @@ export default function BoutiqueCommandesPage() {
                     </div>
                   </div>
 
-                  {/* Détails */}
                   {isExpanded && (
                     <div className="border-t border-gray-100 bg-gray-50 p-4 space-y-4">
 
@@ -262,8 +290,7 @@ export default function BoutiqueCommandesPage() {
                             {cmd.articles.map((art, i) => (
                               <div key={i} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
                                 {art.photo_url && (
-                                  <img src={art.photo_url} alt=""
-                                    className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
+                                  <img src={art.photo_url} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-sm truncate">{art.nom_produit}</p>
@@ -283,7 +310,6 @@ export default function BoutiqueCommandesPage() {
                             ))}
                           </div>
 
-                          {/* Récap montants */}
                           <div className="mt-3 space-y-1 text-sm">
                             <div className="flex justify-between text-gray-400">
                               <span>Sous-total</span>
@@ -308,9 +334,7 @@ export default function BoutiqueCommandesPage() {
                         <p className="text-xs font-semibold text-gray-500 mb-1">Adresse de livraison</p>
                         <p className="text-sm text-gray-700">{cmd.client_adresse}</p>
                         <p className="text-sm text-gray-400">{cmd.client_ville}, {cmd.client_pays}</p>
-                        {cmd.client_email && (
-                          <p className="text-xs text-gray-400 mt-1">{cmd.client_email}</p>
-                        )}
+                        {cmd.client_email && <p className="text-xs text-gray-400 mt-1">{cmd.client_email}</p>}
                       </div>
 
                       {/* Note */}
