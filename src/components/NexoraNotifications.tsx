@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getNexoraUser } from "@/lib/nexora-auth";
@@ -13,17 +12,17 @@ interface Notification {
   created_at: string;
 }
 
-const TYPE_CONFIG = {
-  success: { bg: "bg-green-50 border-green-200",  icon: CheckCircle,  color: "text-green-600"  },
+const TYPE_CONFIG: Record<string, { bg: string; icon: any; color: string }> = {
+  success: { bg: "bg-green-50 border-green-200",  icon: CheckCircle,   color: "text-green-600"  },
   warning: { bg: "bg-yellow-50 border-yellow-200", icon: AlertTriangle, color: "text-yellow-600" },
-  danger:  { bg: "bg-red-50 border-red-200",       icon: XCircle,      color: "text-red-600"    },
-  info:    { bg: "bg-blue-50 border-blue-200",      icon: Info,         color: "text-blue-600"   },
+  danger:  { bg: "bg-red-50 border-red-200",       icon: XCircle,       color: "text-red-600"    },
+  info:    { bg: "bg-blue-50 border-blue-200",      icon: Info,          color: "text-blue-600"   },
 };
 
 export default function NexoraNotifications() {
   const user = getNexoraUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]       = useState(false);
   const [visible, setVisible] = useState<Notification | null>(null);
 
   const loadNotifs = async () => {
@@ -38,10 +37,9 @@ export default function NexoraNotifications() {
   };
 
   useEffect(() => {
+    if (!user?.id) return;
     loadNotifs();
 
-    // Realtime — nouvelles notifications
-    if (!user?.id) return;
     const channel = supabase
       .channel("notifs_" + user.id)
       .on("postgres_changes", {
@@ -52,7 +50,6 @@ export default function NexoraNotifications() {
       }, (payload) => {
         const notif = payload.new as Notification;
         setNotifications(prev => [notif, ...prev]);
-        // Afficher le toast en haut
         setVisible(notif);
         setTimeout(() => setVisible(null), 5000);
       })
@@ -62,7 +59,8 @@ export default function NexoraNotifications() {
   }, [user?.id]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from("nexora_notifications" as any)
+    await supabase
+      .from("nexora_notifications" as any)
       .update({ lu: true })
       .eq("id", id);
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
@@ -70,7 +68,8 @@ export default function NexoraNotifications() {
 
   const markAllRead = async () => {
     if (!user?.id) return;
-    await supabase.from("nexora_notifications" as any)
+    await supabase
+      .from("nexora_notifications" as any)
       .update({ lu: true })
       .eq("user_id", user.id)
       .eq("lu", false);
@@ -81,27 +80,39 @@ export default function NexoraNotifications() {
 
   return (
     <>
-      {/* ── Toast en haut de l'écran ── */}
+      <style>{`
+        @keyframes slideDown {
+          from { transform: translate(-50%, -16px); opacity: 0; }
+          to   { transform: translate(-50%, 0);     opacity: 1; }
+        }
+        .notif-toast { animation: slideDown 0.3s ease forwards; }
+      `}</style>
+
+      {/* ── Toast en haut ── */}
       {visible && (() => {
-        const cfg = TYPE_CONFIG[visible.type as keyof typeof TYPE_CONFIG] || TYPE_CONFIG.info;
+        const cfg = TYPE_CONFIG[visible.type] || TYPE_CONFIG.info;
         const Icon = cfg.icon;
         return (
-          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[92vw] max-w-sm border rounded-2xl p-4 shadow-xl flex items-start gap-3 ${cfg.bg} animate-in slide-in-from-top-2 duration-300`}>
+          <div className={`notif-toast fixed top-4 left-1/2 z-[9999] w-[92vw] max-w-sm border rounded-2xl p-4 shadow-xl flex items-start gap-3 ${cfg.bg}`}
+            style={{ transform: "translateX(-50%)" }}>
             <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${cfg.color}`} />
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-gray-900">{visible.titre}</p>
               <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{visible.message}</p>
             </div>
-            <button onClick={() => setVisible(null)} className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors">
+            <button
+              onClick={() => setVisible(null)}
+              className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors">
               <X className="w-4 h-4 text-gray-500" />
             </button>
           </div>
         );
       })()}
 
-      {/* ── Icône cloche dans le header ── */}
+      {/* ── Cloche ── */}
       <div className="relative">
-        <button onClick={() => { setOpen(!open); if (!open) loadNotifs(); }}
+        <button
+          onClick={() => { setOpen(!open); if (!open) loadNotifs(); }}
           className="relative p-2 rounded-xl hover:bg-muted transition-colors">
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
@@ -111,7 +122,7 @@ export default function NexoraNotifications() {
           )}
         </button>
 
-        {/* ── Dropdown notifications ── */}
+        {/* ── Dropdown ── */}
         {open && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
@@ -132,14 +143,15 @@ export default function NexoraNotifications() {
                     Aucune notification
                   </div>
                 ) : notifications.map(notif => {
-                  const cfg = TYPE_CONFIG[notif.type as keyof typeof TYPE_CONFIG] || TYPE_CONFIG.info;
+                  const cfg = TYPE_CONFIG[notif.type] || TYPE_CONFIG.info;
                   const Icon = cfg.icon;
                   return (
-                    <div key={notif.id}
+                    <div
+                      key={notif.id}
                       onClick={() => markAsRead(notif.id)}
                       className={`p-4 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors ${!notif.lu ? "bg-primary/5" : ""}`}>
                       <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.bg}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border ${cfg.bg}`}>
                           <Icon className={`w-4 h-4 ${cfg.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
