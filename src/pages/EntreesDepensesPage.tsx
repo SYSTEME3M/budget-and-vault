@@ -1,23 +1,69 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
-import EntreesPage from "@/pages/EntreesPage";
-import DepensesPage from "@/pages/DepensesPage";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Crown, Plus, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { formatAmount, convertAmount, playSuccessSound } from "@/lib/app-utils";
+import { hasNexoraPremium } from "@/lib/nexora-auth";
+import { useNavigate } from "react-router-dom";
 
+type Devise = "XOF" | "USD";
+
+const LIMITE_GRATUIT = 5;
+
+// ── Bannière quota réutilisable ──────────────────────────────
+function QuotaBanner({ nb, label, couleur, navigate }: { nb: number; label: string; couleur: string; navigate: () => void }) {
+  const atteinte = nb >= LIMITE_GRATUIT;
+  return (
+    <div className={`rounded-xl px-4 py-3 flex items-center justify-between gap-3 border ${atteinte ? "bg-red-50 border-red-200" : "bg-yellow-50 border-yellow-200"}`}>
+      <div className="flex items-center gap-2 min-w-0">
+        <Crown className={`w-4 h-4 flex-shrink-0 ${atteinte ? "text-red-500" : "text-yellow-600"}`} />
+        <p className={`text-xs font-semibold ${atteinte ? "text-red-700" : "text-yellow-700"}`}>
+          {label} : {nb} / {LIMITE_GRATUIT}{atteinte && " — Limite atteinte"}
+        </p>
+      </div>
+      <button onClick={navigate} className="flex-shrink-0 text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1.5 rounded-lg">
+        Passer Premium
+      </button>
+    </div>
+  );
+}
+
+// ── Mur limite ───────────────────────────────────────────────
+function LimiteMur({ label, navigate }: { label: string; navigate: () => void }) {
+  return (
+    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center space-y-4">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center mx-auto shadow-md">
+        <Crown className="w-7 h-7 text-white" />
+      </div>
+      <div>
+        <p className="font-black text-gray-800 text-lg">Limite du plan gratuit atteinte</p>
+        <p className="text-gray-500 text-sm mt-1">
+          Vous avez atteint les <span className="font-bold">{LIMITE_GRATUIT} {label}</span> inclus dans le plan gratuit.
+        </p>
+        <p className="text-gray-400 text-xs mt-1">Passez au Premium pour enregistrer sans limite.</p>
+      </div>
+      <button onClick={navigate} className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all">
+        <Crown className="w-4 h-4" /> Passer à Premium
+      </button>
+    </div>
+  );
+}
+
+// ── Page principale ──────────────────────────────────────────
 export default function EntreesDepensesPage() {
   const [tab, setTab] = useState<"entrees" | "depenses">("entrees");
 
   return (
     <AppLayout>
       <div className="space-y-4">
-        {/* Onglets */}
         <div className="flex bg-muted rounded-xl p-1 w-fit">
           <button
             onClick={() => setTab("entrees")}
             className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-              tab === "entrees"
-                ? "bg-green-500 text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              tab === "entrees" ? "bg-green-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <TrendingUp className="w-4 h-4" /> Entrées
@@ -25,52 +71,25 @@ export default function EntreesDepensesPage() {
           <button
             onClick={() => setTab("depenses")}
             className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-              tab === "depenses"
-                ? "bg-destructive text-destructive-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              tab === "depenses" ? "bg-destructive text-destructive-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <TrendingDown className="w-4 h-4" /> Dépenses
           </button>
         </div>
 
-        {/* Contenu sans le layout wrapper */}
-        {tab === "entrees" ? <EntreesInner /> : <DepensesInner />}
+        {tab === "entrees" ? <EntreesContent /> : <DepensesContent />}
       </div>
     </AppLayout>
   );
 }
 
-// Wrapper simplifié qui réutilise les pages existantes mais sans AppLayout redoublé
-function EntreesInner() {
-  return (
-    <div className="[&>div]:!p-0 [&_main]:!p-0">
-      <EntreesContent />
-    </div>
-  );
-}
-
-function DepensesInner() {
-  return (
-    <div className="[&>div]:!p-0 [&_main]:!p-0">
-      <DepensesContent />
-    </div>
-  );
-}
-
-// Imports dynamiques pour éviter le double layout
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
-import { formatAmount, convertAmount, playSuccessSound } from "@/lib/app-utils";
-
-type Devise = "XOF" | "USD";
-
+// ── Entrées ──────────────────────────────────────────────────
 function EntreesContent() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isPremium = hasNexoraPremium();
+
   const [entrees, setEntrees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -89,16 +108,30 @@ function EntreesContent() {
 
   useEffect(() => { load(); }, []);
 
+  const nbEntrees = entrees.length;
+  const limiteAtteinte = !isPremium && nbEntrees >= LIMITE_GRATUIT;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPremium && nbEntrees >= LIMITE_GRATUIT) {
+      toast({ title: "Limite atteinte", description: `Plan gratuit limité à ${LIMITE_GRATUIT} entrées. Passez au Premium.`, variant: "destructive" });
+      return;
+    }
     if (!form.titre || !form.montant) { toast({ title: "Titre et montant requis", variant: "destructive" }); return; }
     setSaving(true);
     const { error } = await supabase.from("entrees").insert({
       titre: form.titre, montant: parseFloat(form.montant), categorie: form.categorie,
       devise: form.devise, date_entree: form.date_entree, note: form.note || null
     });
-    if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); }
-    else { playSuccessSound(); toast({ title: "Entrée enregistrée" }); setShowForm(false); setForm({ titre: "", montant: "", categorie: "Autre", devise: "XOF", date_entree: new Date().toISOString().split("T")[0], note: "" }); load(); }
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      playSuccessSound();
+      toast({ title: "Entrée enregistrée" });
+      setShowForm(false);
+      setForm({ titre: "", montant: "", categorie: "Autre", devise: "XOF", date_entree: new Date().toISOString().split("T")[0], note: "" });
+      load();
+    }
     setSaving(false);
   };
 
@@ -115,14 +148,37 @@ function EntreesContent() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-black">Entrées</h2>
-          <p className="text-sm text-muted-foreground">Total : <strong className="text-green-600">{formatAmount(total, "XOF")}</strong></p>
+          <p className="text-sm text-muted-foreground">
+            Total : <strong className="text-green-600">{formatAmount(total, "XOF")}</strong>
+            {!isPremium && <span className="ml-2 text-xs text-muted-foreground">({nbEntrees}/{LIMITE_GRATUIT})</span>}
+          </p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} className="bg-green-500 hover:bg-green-600 text-white gap-1">
+        <Button
+          onClick={() => {
+            if (limiteAtteinte) {
+              toast({ title: "Limite atteinte", description: `Plan gratuit limité à ${LIMITE_GRATUIT} entrées.`, variant: "destructive" });
+              return;
+            }
+            setShowForm(!showForm);
+          }}
+          className="bg-green-500 hover:bg-green-600 text-white gap-1"
+        >
           <Plus className="w-4 h-4" /> Nouvelle entrée
         </Button>
       </div>
 
-      {showForm && (
+      {/* Bannière quota */}
+      {!isPremium && (
+        <QuotaBanner nb={nbEntrees} label="Entrées" couleur="green" navigate={() => navigate("/abonnement")} />
+      )}
+
+      {/* Mur limite */}
+      {limiteAtteinte && !showForm && (
+        <LimiteMur label="entrées" navigate={() => navigate("/abonnement")} />
+      )}
+
+      {/* Formulaire */}
+      {showForm && !limiteAtteinte && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
@@ -162,9 +218,13 @@ function EntreesContent() {
         </form>
       )}
 
+      {/* Liste */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {loading ? <div className="p-8 text-center text-muted-foreground">Chargement...</div> :
-          entrees.length === 0 ? <div className="p-8 text-center text-muted-foreground">Aucune entrée enregistrée</div> : (
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        ) : entrees.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">Aucune entrée enregistrée</div>
+        ) : (
           <div className="divide-y divide-border">
             {entrees.map((e: any) => (
               <div key={e.id} className="flex items-center gap-3 px-4 py-3">
@@ -188,8 +248,12 @@ function EntreesContent() {
   );
 }
 
+// ── Dépenses ─────────────────────────────────────────────────
 function DepensesContent() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isPremium = hasNexoraPremium();
+
   const [depenses, setDepenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -208,16 +272,30 @@ function DepensesContent() {
 
   useEffect(() => { load(); }, []);
 
+  const nbDepenses = depenses.length;
+  const limiteAtteinte = !isPremium && nbDepenses >= LIMITE_GRATUIT;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPremium && nbDepenses >= LIMITE_GRATUIT) {
+      toast({ title: "Limite atteinte", description: `Plan gratuit limité à ${LIMITE_GRATUIT} dépenses. Passez au Premium.`, variant: "destructive" });
+      return;
+    }
     if (!form.titre || !form.montant) { toast({ title: "Titre et montant requis", variant: "destructive" }); return; }
     setSaving(true);
     const { error } = await supabase.from("depenses").insert({
       titre: form.titre, montant: parseFloat(form.montant), categorie: form.categorie,
       devise: form.devise, date_depense: form.date_depense, note: form.note || null
     });
-    if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); }
-    else { playSuccessSound(); toast({ title: "Dépense enregistrée" }); setShowForm(false); setForm({ titre: "", montant: "", categorie: "Autre", devise: "XOF", date_depense: new Date().toISOString().split("T")[0], note: "" }); load(); }
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      playSuccessSound();
+      toast({ title: "Dépense enregistrée" });
+      setShowForm(false);
+      setForm({ titre: "", montant: "", categorie: "Autre", devise: "XOF", date_depense: new Date().toISOString().split("T")[0], note: "" });
+      load();
+    }
     setSaving(false);
   };
 
@@ -234,14 +312,38 @@ function DepensesContent() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-black">Dépenses</h2>
-          <p className="text-sm text-muted-foreground">Total : <strong className="text-destructive">{formatAmount(total, "XOF")}</strong></p>
+          <p className="text-sm text-muted-foreground">
+            Total : <strong className="text-destructive">{formatAmount(total, "XOF")}</strong>
+            {!isPremium && <span className="ml-2 text-xs text-muted-foreground">({nbDepenses}/{LIMITE_GRATUIT})</span>}
+          </p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} variant="destructive" className="gap-1">
+        <Button
+          onClick={() => {
+            if (limiteAtteinte) {
+              toast({ title: "Limite atteinte", description: `Plan gratuit limité à ${LIMITE_GRATUIT} dépenses.`, variant: "destructive" });
+              return;
+            }
+            setShowForm(!showForm);
+          }}
+          variant="destructive"
+          className="gap-1"
+        >
           <Plus className="w-4 h-4" /> Nouvelle dépense
         </Button>
       </div>
 
-      {showForm && (
+      {/* Bannière quota */}
+      {!isPremium && (
+        <QuotaBanner nb={nbDepenses} label="Dépenses" couleur="red" navigate={() => navigate("/abonnement")} />
+      )}
+
+      {/* Mur limite */}
+      {limiteAtteinte && !showForm && (
+        <LimiteMur label="dépenses" navigate={() => navigate("/abonnement")} />
+      )}
+
+      {/* Formulaire */}
+      {showForm && !limiteAtteinte && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
@@ -281,9 +383,13 @@ function DepensesContent() {
         </form>
       )}
 
+      {/* Liste */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {loading ? <div className="p-8 text-center text-muted-foreground">Chargement...</div> :
-          depenses.length === 0 ? <div className="p-8 text-center text-muted-foreground">Aucune dépense enregistrée</div> : (
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+        ) : depenses.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">Aucune dépense enregistrée</div>
+        ) : (
           <div className="divide-y divide-border">
             {depenses.map((d: any) => (
               <div key={d.id} className="flex items-center gap-3 px-4 py-3">
