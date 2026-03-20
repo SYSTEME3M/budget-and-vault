@@ -1,156 +1,253 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { getNexoraUser } from "@/lib/nexora-auth";
-import { Bell, X, AlertTriangle, CheckCircle, Info, XCircle } from "lucide-react";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard, Lock, Image, Link2, User, LogOut, Menu, X,
+  Search, ChevronRight, TrendingUp, History,
+  HandCoins, PiggyBank, ArrowLeft, Receipt, Store, BadgeCheck, Map,
+  ShieldCheck
+} from "lucide-react";
+import { clearSession, isAdminUser } from "@/lib/app-utils";
+import { logoutUser, getNexoraUser, isNexoraAdmin } from "@/lib/nexora-auth";
+import { Input } from "@/components/ui/input";
+import { ReactNode } from "react";
+import nexoraLogo from "@/assets/nexora-logo.png";
+import NexoraNotifications from "@/components/NexoraNotifications";
 
-interface Notification {
-  id: string;
-  titre: string;
-  message: string;
-  type: string;
-  lu: boolean;
-  created_at: string;
-}
-
-const TYPE_CONFIG: Record<string, { bg: string; icon: any; color: string }> = {
-  success: { bg: "bg-green-50 border-green-200",  icon: CheckCircle,   color: "text-green-600"  },
-  warning: { bg: "bg-yellow-50 border-yellow-200", icon: AlertTriangle, color: "text-yellow-600" },
-  danger:  { bg: "bg-red-50 border-red-200",       icon: XCircle,       color: "text-red-600"    },
-  info:    { bg: "bg-blue-50 border-blue-200",      icon: Info,          color: "text-blue-600"   },
+const getNavItems = (isAdmin: boolean) => {
+  const items = [
+    { path: "/dashboard",        icon: LayoutDashboard, label: "Tableau de bord",    color: "text-red-400",     bg: "bg-red-400/10"     },
+    { path: "/entrees-depenses", icon: TrendingUp,      label: "Entrées & Dépenses", color: "text-green-400",   bg: "bg-green-400/10"   },
+    { path: "/historique",       icon: History,         label: "Historique",          color: "text-accent",      bg: "bg-accent/10"      },
+    { path: "/prets",            icon: HandCoins,       label: "Prêts & Dettes",      color: "text-orange-300",  bg: "bg-orange-300/10"  },
+    { path: "/investissements",  icon: PiggyBank,       label: "Investissements",     color: "text-emerald-300", bg: "bg-emerald-300/10" },
+    { path: "/factures",         icon: Receipt,         label: "Factures",            color: "text-purple-300",  bg: "bg-purple-300/10"  },
+    { path: "/coffre-fort",      icon: Lock,            label: "Coffre-fort",         color: "text-yellow-300",  bg: "bg-yellow-300/10"  },
+    { path: "/liens",            icon: Link2,           label: "Liens & Contacts",    color: "text-green-300",   bg: "bg-green-300/10"   },
+    { path: "/boutique",         icon: Store,           label: "Nexora Shop",         color: "text-pink-300",    bg: "bg-pink-300/10"    },
+    { path: "/immobilier",       icon: Map,             label: "Marché Immobilier",   color: "text-blue-300",    bg: "bg-blue-300/10"    },
+  ];
+  if (isAdmin) {
+    items.push({ path: "/admin",  icon: ShieldCheck, label: "Panel Admin", color: "text-amber-400", bg: "bg-amber-400/10" });
+    items.push({ path: "/medias", icon: Image,       label: "Médias",      color: "text-sky-300",   bg: "bg-sky-300/10"  });
+  }
+  return items;
 };
 
-export default function NexoraNotifications() {
-  const user = getNexoraUser();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [open, setOpen]       = useState(false);
-  const [visible, setVisible] = useState<Notification | null>(null);
+interface AppLayoutProps {
+  children: ReactNode;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+}
 
-  const loadNotifs = async () => {
-    if (!user?.id) return;
-    const { data } = await supabase
-      .from("nexora_notifications" as any)
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    setNotifications((data as Notification[]) || []);
+export default function AppLayout({ children, searchQuery = "", onSearchChange }: AppLayoutProps) {
+  // ── Tous les hooks EN PREMIER — jamais de return avant ──
+  const [sidebarOpen, setSidebarOpen]             = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const nexoraUser = getNexoraUser();
+  const adminUser  = isNexoraAdmin() || isAdminUser();
+  const navItems   = getNavItems(adminUser);
+
+  const displayName = nexoraUser?.nom_prenom || "Eric Kpakpo";
+  const displayRole = nexoraUser?.is_admin ? "Administrateur" : nexoraUser?.plan === "premium" ? "Premium" : "Gratuit";
+  const hasBadge    = nexoraUser?.badge_premium || nexoraUser?.is_admin;
+  const isAdminPage = location.pathname === "/admin";
+  const canGoBack   = location.pathname !== "/dashboard";
+
+  const currentPage = navItems.find(i =>
+    i.path === location.pathname ||
+    (i.path === "/boutique" && location.pathname.startsWith("/boutique")) ||
+    (i.path === "/entrees-depenses" && (
+      location.pathname === "/entrees" ||
+      location.pathname === "/depenses" ||
+      location.pathname === "/entrees-depenses"
+    ))
+  );
+
+  const handleLogout = async () => {
+    await logoutUser();
+    clearSession();
+    navigate("/login");
   };
 
-  useEffect(() => {
-    if (!user?.id) return;
-    loadNotifs();
-
-    const channel = supabase
-      .channel("notifs_" + user.id)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "nexora_notifications",
-        filter: `user_id=eq.${user.id}`,
-      }, (payload) => {
-        const notif = payload.new as Notification;
-        setNotifications(prev => [notif, ...prev]);
-        setVisible(notif);
-        setTimeout(() => setVisible(null), 5000);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
-
-  const markAsRead = async (id: string) => {
-    await supabase.from("nexora_notifications" as any).update({ lu: true }).eq("id", id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
-  };
-
-  const markAllRead = async () => {
-    if (!user?.id) return;
-    await supabase.from("nexora_notifications" as any).update({ lu: true }).eq("user_id", user.id).eq("lu", false);
-    setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
-  };
-
-  const unreadCount = notifications.filter(n => !n.lu).length;
+  // ── Return conditionnel APRÈS tous les hooks ──
+  if (isAdminPage) {
+    return <>{children}</>;
+  }
 
   return (
-    <>
-      {/* Toast en haut */}
-      {visible && (() => {
-        const cfg = TYPE_CONFIG[visible.type] || TYPE_CONFIG.info;
-        const Icon = cfg.icon;
-        return (
-          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[92vw] max-w-sm border rounded-2xl p-4 shadow-xl flex items-start gap-3 ${cfg.bg}`}
-            style={{ animation: "slideDown 0.3s ease" }}>
-            <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${cfg.color}`} />
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm text-gray-900">{visible.titre}</p>
-              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{visible.message}</p>
+    <div className="min-h-screen flex bg-muted/30 overflow-x-hidden max-w-[100vw]">
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 bg-foreground/30 z-20 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)} />
+      )}
+
+      {/* ── Sidebar ── */}
+      <aside className={`
+        fixed top-0 left-0 h-full z-30 bg-sidebar text-sidebar-foreground flex flex-col
+        transition-all duration-300 shadow-brand-lg
+        ${sidebarOpen ? "w-60" : "w-[68px]"}
+        ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}>
+        <div className="h-1 w-full bg-gradient-to-r from-primary via-accent to-destructive flex-shrink-0" />
+
+        {/* Profil */}
+        <Link to="/profil" onClick={() => setMobileSidebarOpen(false)}
+          className="flex items-center gap-3 px-3 py-3.5 border-b border-sidebar-border hover:bg-sidebar-accent transition-colors">
+          <div className="relative flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-accent/60">
+              {nexoraUser?.avatar_url ? (
+                <img src={nexoraUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-accent/20 flex items-center justify-center">
+                  <User className="w-5 h-5 text-accent" />
+                </div>
+              )}
             </div>
-            <button onClick={() => setVisible(null)} className="flex-shrink-0 p-1 rounded-lg hover:bg-black/10 transition-colors">
-              <X className="w-4 h-4 text-gray-500" />
-            </button>
           </div>
-        );
-      })()}
-
-      <style>{`@keyframes slideDown { from { transform: translate(-50%, -20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }`}</style>
-
-      {/* Cloche */}
-      <div className="relative">
-        <button onClick={() => { setOpen(!open); if (!open) loadNotifs(); }}
-          className="relative p-2 rounded-xl hover:bg-muted transition-colors">
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </button>
-
-        {open && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 top-12 z-50 w-80 max-h-[80vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-border flex items-center justify-between">
-                <span className="font-bold text-sm">Notifications</span>
-                {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-primary hover:underline">Tout marquer lu</button>
-                )}
+          {sidebarOpen && (
+            <div className="min-w-0 flex-1">
+              <div className="font-display font-black text-sm text-sidebar-foreground truncate flex items-center gap-1.5">
+                {displayName.split(" ")[0]}
+                {hasBadge && <BadgeCheck className="w-4 h-4 text-green-400 flex-shrink-0" />}
               </div>
-              <div className="overflow-y-auto flex-1">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-sm">
-                    <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    Aucune notification
-                  </div>
-                ) : notifications.map(notif => {
-                  const cfg = TYPE_CONFIG[notif.type] || TYPE_CONFIG.info;
-                  const Icon = cfg.icon;
-                  return (
-                    <div key={notif.id} onClick={() => markAsRead(notif.id)}
-                      className={`p-4 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors ${!notif.lu ? "bg-primary/5" : ""}`}>
-                      <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border ${cfg.bg}`}>
-                          <Icon className={`w-4 h-4 ${cfg.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1">
-                            <p className={`text-sm font-semibold ${!notif.lu ? "text-foreground" : "text-muted-foreground"}`}>{notif.titre}</p>
-                            {!notif.lu && <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-1" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{notif.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(notif.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <div className="text-xs text-sidebar-foreground/50 truncate">{displayRole}</div>
             </div>
-          </>
-        )}
+          )}
+        </Link>
+
+        {/* Logo + toggle */}
+        <div className={`flex items-center gap-2.5 px-3 py-2.5 border-b border-sidebar-border ${!sidebarOpen ? "justify-center" : ""}`}>
+          <img src={nexoraLogo} alt="Nexora" className="w-6 h-6 object-contain flex-shrink-0" />
+          {sidebarOpen && (
+            <span className="font-display font-black text-xs text-sidebar-foreground tracking-widest flex-1">NEXORA</span>
+          )}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={`hidden lg:flex w-6 h-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors flex-shrink-0 ${!sidebarOpen ? "ml-0" : "ml-auto"}`}>
+            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${sidebarOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+          {navItems.map(({ path, icon: Icon, label, color, bg }) => {
+            const active =
+              location.pathname === path ||
+              (path === "/boutique" && location.pathname.startsWith("/boutique")) ||
+              (path === "/entrees-depenses" && (
+                location.pathname === "/entrees" ||
+                location.pathname === "/depenses" ||
+                location.pathname === "/entrees-depenses"
+              ));
+            const isAdminItem = path === "/admin";
+            return (
+              <div key={path}>
+                {isAdminItem && (
+                  <div className="my-2 mx-1">
+                    <div className="h-px bg-sidebar-border opacity-40" />
+                    {sidebarOpen && (
+                      <p className="text-[10px] font-bold text-sidebar-foreground/30 uppercase tracking-widest px-2 pt-2 pb-1">
+                        Administration
+                      </p>
+                    )}
+                  </div>
+                )}
+                <Link to={path} onClick={() => setMobileSidebarOpen(false)}
+                  title={!sidebarOpen ? label : undefined}
+                  className={`
+                    flex items-center gap-3 rounded-xl transition-all duration-150
+                    ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
+                    ${active
+                      ? "bg-accent text-accent-foreground font-semibold shadow-sm"
+                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    }
+                  `}>
+                  <div className={`
+                    flex items-center justify-center rounded-lg flex-shrink-0
+                    ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}
+                    ${active ? "bg-white/20" : bg}
+                    transition-all duration-150
+                  `}>
+                    <Icon className={`flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"} ${active ? "text-accent-foreground" : color}`} />
+                  </div>
+                  {sidebarOpen && <span className="text-sm truncate">{label}</span>}
+                </Link>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-2.5 border-t border-sidebar-border">
+          <button onClick={handleLogout} title="Déconnexion"
+            className={`
+              w-full flex items-center gap-3 rounded-xl text-sidebar-foreground/70
+              hover:bg-destructive/20 hover:text-red-200 transition-colors
+              ${sidebarOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}
+            `}>
+            <div className={`flex items-center justify-center rounded-lg flex-shrink-0 bg-red-500/10 ${sidebarOpen ? "w-7 h-7" : "w-9 h-9"}`}>
+              <LogOut className={`text-red-300 flex-shrink-0 ${sidebarOpen ? "w-4 h-4" : "w-5 h-5"}`} />
+            </div>
+            {sidebarOpen && <span className="text-sm">Déconnexion</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden min-w-0 w-0 ${sidebarOpen ? "lg:ml-60" : "lg:ml-[68px]"}`}>
+
+        {/* Header */}
+        <header className="sticky top-0 z-10 bg-card border-b border-border px-4 lg:px-6 h-14 flex items-center gap-3 shadow-sm">
+          <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
+            {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          {canGoBack && (
+            <button onClick={() => navigate(-1)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
+              title="Retour">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            {currentPage && (
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${currentPage.bg}`}>
+                <currentPage.icon className={`w-4 h-4 ${currentPage.color}`} />
+              </div>
+            )}
+            <h2 className="font-display font-bold text-foreground text-base truncate">
+              {currentPage?.label || "NEXORA"}
+            </h2>
+          </div>
+
+          {onSearchChange && (
+            <div className="relative hidden sm:block w-52">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher..."
+                value={searchQuery}
+                onChange={e => onSearchChange(e.target.value)}
+                className="pl-9 h-8 bg-muted border-0 focus:bg-card text-sm rounded-full"
+              />
+            </div>
+          )}
+
+          {/* ── Notifications ── */}
+          <NexoraNotifications />
+        </header>
+
+        <main className="flex-1 p-3 lg:p-5 overflow-x-hidden min-w-0 max-w-full">
+          {children}
+        </main>
+
+        <footer className="py-2.5 px-6 border-t border-border text-center text-xs text-muted-foreground">
+          NEXORA © {new Date().getFullYear()} — Tous droits réservés
+        </footer>
       </div>
-    </>
+    </div>
   );
 }
