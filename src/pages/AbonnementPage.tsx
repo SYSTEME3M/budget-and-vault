@@ -1,11 +1,51 @@
+"use client";
+import { useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { getNexoraUser, isNexoraAdmin, hasNexoraPremium } from "@/lib/nexora-auth";
 import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone, X } from "lucide-react";
+
+declare global {
+  interface Window {
+    openKkiapayWidget: (options: Record<string, unknown>) => void;
+  }
+}
 
 export default function AbonnementPage() {
   const user = getNexoraUser();
   const isAdmin = isNexoraAdmin();
   const isPremium = hasNexoraPremium();
+
+  // Charger le SDK KKiaPay
+  useEffect(() => {
+    if (document.getElementById("kkiapay-sdk")) return;
+    const script = document.createElement("script");
+    script.id = "kkiapay-sdk";
+    script.src = "https://cdn.kkiapay.me/k.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
+  // Détecter retour après paiement
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      window.history.replaceState({}, "", "/abonnement");
+      window.location.reload();
+    }
+  }, []);
+
+  const handleSubscribe = () => {
+    if (!user?.id) return;
+    window.openKkiapayWidget({
+      amount: 6500,
+      key: process.env.NEXT_PUBLIC_KKIAPAY_API_KEY,
+      sandbox: true, // ← passer à false en production
+      email: user.email ?? "",
+      data: JSON.stringify({ userId: user.id }),
+      callback: `${window.location.origin}/abonnement?payment=success`,
+      theme: "#7c3aed",
+    });
+  };
 
   return (
     <AppLayout>
@@ -58,13 +98,9 @@ export default function AbonnementPage() {
           </div>
         )}
 
-        {/* ══════════════════════════════
-            PLAN GRATUIT
-        ══════════════════════════════ */}
+        {/* ── Plan Gratuit ── */}
         <div className={`bg-white border-2 rounded-2xl p-6 transition-all shadow-sm ${
-          !isPremium && !isAdmin
-            ? "border-violet-500 shadow-violet-100"
-            : "border-gray-200"
+          !isPremium && !isAdmin ? "border-violet-500 shadow-violet-100" : "border-gray-200"
         }`}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -81,7 +117,6 @@ export default function AbonnementPage() {
             )}
           </div>
 
-          {/* Inclus */}
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inclus</p>
           <ul className="space-y-2.5 text-sm mb-5">
             {[
@@ -108,7 +143,6 @@ export default function AbonnementPage() {
             ))}
           </ul>
 
-          {/* Non inclus */}
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Non inclus</p>
           <ul className="space-y-2 text-sm">
             {[
@@ -128,9 +162,7 @@ export default function AbonnementPage() {
           </ul>
         </div>
 
-        {/* ══════════════════════════════
-            PLAN PREMIUM
-        ══════════════════════════════ */}
+        {/* ── Plan Premium ── */}
         <div className={`border-2 rounded-2xl p-6 relative overflow-hidden transition-all ${
           isPremium && !isAdmin
             ? "border-violet-500 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-lg shadow-violet-100"
@@ -184,17 +216,17 @@ export default function AbonnementPage() {
                   <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-medium text-gray-800">{f.label}</span>
-                    {f.desc && <span className="text-gray-500"> — {f.desc}</span>}
+                    <span className="text-gray-500"> — {f.desc}</span>
                   </div>
                 </li>
               ))}
             </ul>
 
             {/* ── Bouton abonnement ── */}
-            {!isPremium && (
+            {!isPremium && !isAdmin && (
               <div className="space-y-3">
                 <button
-                  onClick={() => alert("Paiement en cours d'intégration. Bientôt disponible !")}
+                  onClick={handleSubscribe}
                   className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
                   <Zap className="w-4 h-4" />
                   S'abonner — 10$ / mois
@@ -220,9 +252,6 @@ export default function AbonnementPage() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 text-center mt-2">
-                    Paiement sécurisé — Intégration API en cours
-                  </p>
                 </div>
               </div>
             )}
