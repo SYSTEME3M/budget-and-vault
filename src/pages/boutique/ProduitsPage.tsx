@@ -4,102 +4,51 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BoutiqueLayout from "@/components/BoutiqueLayout";
+import { hasNexoraPremium } from "@/lib/nexora-auth";
+import { useNavigate } from "react-router-dom";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Package,
   Star, Edit2, ToggleLeft, ToggleRight,
   FileText, BookOpen, Key, Package2,
   Briefcase, Tag, Image, AlertCircle,
-  Download, Lock, Zap
+  Download, Lock, Zap, Crown
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type TypeDigital = "fichier" | "formation" | "licence" | "bundle" | "service";
 type ModeTarification = "unique" | "abonnement_mensuel" | "abonnement_annuel" | "versements";
 
-interface Variation {
-  nom: string;
-  valeurs: string[];
-}
-
-interface PaiementProduit {
-  reseau: string;
-  numero: string;
-  nom_titulaire: string;
-}
-
-interface ReseauxSociaux {
-  instagram: string;
-  tiktok: string;
-  facebook: string;
-  youtube: string;
-  whatsapp: string;
-  site_web: string;
-}
-
-interface Module {
-  titre: string;
-  description: string;
-}
+interface Variation { nom: string; valeurs: string[]; }
+interface PaiementProduit { reseau: string; numero: string; nom_titulaire: string; }
+interface ReseauxSociaux { instagram: string; tiktok: string; facebook: string; youtube: string; whatsapp: string; site_web: string; }
+interface Module { titre: string; description: string; }
 
 interface ProduitPhysique {
-  id: string;
-  boutique_id: string;
-  nom: string;
-  description: string;
-  prix: number;
-  prix_promo: number | null;
-  type: "physique";
-  categorie: string;
-  tags: string[];
-  stock: number;
-  stock_illimite: boolean;
-  photos: string[];
-  actif: boolean;
-  vedette: boolean;
-  paiement_reception: boolean;
-  paiement_lien: string | null;
-  moyens_paiement: PaiementProduit[];
-  politique_remboursement: string;
-  politique_confidentialite: string;
-  reseaux_sociaux: ReseauxSociaux;
-  poids: string;
-  dimensions: string;
-  sku: string;
+  id: string; boutique_id: string; nom: string; description: string;
+  prix: number; prix_promo: number | null; type: "physique"; categorie: string;
+  tags: string[]; stock: number; stock_illimite: boolean; photos: string[];
+  actif: boolean; vedette: boolean; paiement_reception: boolean;
+  paiement_lien: string | null; moyens_paiement: PaiementProduit[];
+  politique_remboursement: string; politique_confidentialite: string;
+  reseaux_sociaux: ReseauxSociaux; poids: string; dimensions: string; sku: string;
   variations?: Variation[];
 }
 
 interface ProduitDigital {
-  id: string;
-  boutique_id: string;
-  nom: string;
-  description: string;
-  prix: number;
-  prix_promo: number | null;
-  type: "numerique";
-  type_digital: TypeDigital;
-  mode_tarification: ModeTarification;
-  categorie: string;
-  tags: string[];
-  photos: string[];
-  fichier_url: string | null;
-  fichier_nom: string | null;
-  fichier_taille: string | null;
-  modules: Module[];
-  actif: boolean;
-  vedette: boolean;
-  paiement_lien: string | null;
-  moyens_paiement: PaiementProduit[];
-  politique_remboursement: string;
-  politique_confidentialite: string;
-  reseaux_sociaux: ReseauxSociaux;
-  seo_titre: string;
-  seo_description: string;
-  protection_antipiratage: boolean;
-  livraison_automatique: boolean;
+  id: string; boutique_id: string; nom: string; description: string;
+  prix: number; prix_promo: number | null; type: "numerique";
+  type_digital: TypeDigital; mode_tarification: ModeTarification;
+  categorie: string; tags: string[]; photos: string[];
+  fichier_url: string | null; fichier_nom: string | null; fichier_taille: string | null;
+  modules: Module[]; actif: boolean; vedette: boolean;
+  paiement_lien: string | null; moyens_paiement: PaiementProduit[];
+  politique_remboursement: string; politique_confidentialite: string;
+  reseaux_sociaux: ReseauxSociaux; seo_titre: string; seo_description: string;
+  protection_antipiratage: boolean; livraison_automatique: boolean;
   nb_telechargements: number | null;
 }
 
-// ─── Constantes ───────────────────────────────────────────
+// ─── Constantes ───────────────────────────────────────────────────────────────
 const CATEGORIES_PHYSIQUE = [
   "Vêtements", "Chaussures", "Accessoires", "Électronique",
   "Alimentation", "Beauté & Santé", "Maison & Déco",
@@ -114,40 +63,32 @@ const CATEGORIES_DIGITAL = [
 ];
 
 const TYPES_DIGITAL: Record<TypeDigital, { label: string; icon: any; description: string; color: string }> = {
-  fichier: { label: "Fichier", icon: FileText, description: "E-books, PDF, ZIP, MP3, vidéos...", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-  formation: { label: "Formation", icon: BookOpen, description: "Cours structurés en modules et chapitres", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  licence: { label: "Licence", icon: Key, description: "Clés d'activation, accès logiciel", color: "bg-purple-100 text-purple-700 border-purple-200" },
-  bundle: { label: "Bundle", icon: Package2, description: "Pack de plusieurs produits groupés", color: "bg-green-100 text-green-700 border-green-200" },
-  service: { label: "Service", icon: Briefcase, description: "Prestations sur mesure, consulting", color: "bg-pink-100 text-pink-700 border-pink-200" },
+  fichier:   { label: "Fichier",    icon: FileText,  description: "E-books, PDF, ZIP, MP3, vidéos...",           color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+  formation: { label: "Formation",  icon: BookOpen,  description: "Cours structurés en modules et chapitres",   color: "bg-blue-100 text-blue-700 border-blue-200" },
+  licence:   { label: "Licence",    icon: Key,       description: "Clés d'activation, accès logiciel",           color: "bg-purple-100 text-purple-700 border-purple-200" },
+  bundle:    { label: "Bundle",     icon: Package2,  description: "Pack de plusieurs produits groupés",          color: "bg-green-100 text-green-700 border-green-200" },
+  service:   { label: "Service",    icon: Briefcase, description: "Prestations sur mesure, consulting",          color: "bg-pink-100 text-pink-700 border-pink-200" },
 };
 
 const MODES_TARIFICATION: Record<ModeTarification, string> = {
-  unique: "Paiement unique",
+  unique:             "Paiement unique",
   abonnement_mensuel: "Abonnement mensuel",
-  abonnement_annuel: "Abonnement annuel",
-  versements: "Paiement en plusieurs fois",
+  abonnement_annuel:  "Abonnement annuel",
+  versements:         "Paiement en plusieurs fois",
 };
 
 const SECTIONS_PHYSIQUE = [
-  { id: "general", label: "Général" },
-  { id: "media", label: "Médias" },
-  { id: "prix", label: "Prix & Stock" },
-  { id: "variations", label: "Variations" },
-  { id: "paiement", label: "Paiement" },
-  { id: "reseaux", label: "Réseaux" },
-  { id: "politiques", label: "Politiques" },
-  { id: "seo", label: "SEO" },
+  { id: "general", label: "Général" }, { id: "media", label: "Médias" },
+  { id: "prix", label: "Prix & Stock" }, { id: "variations", label: "Variations" },
+  { id: "paiement", label: "Paiement" }, { id: "reseaux", label: "Réseaux" },
+  { id: "politiques", label: "Politiques" }, { id: "seo", label: "SEO" },
 ];
 
 const SECTIONS_DIGITAL = [
-  { id: "type", label: "Type" },
-  { id: "general", label: "Général" },
-  { id: "media", label: "Couverture" },
-  { id: "contenu", label: "Contenu" },
-  { id: "prix", label: "Prix" },
-  { id: "paiement", label: "Paiement" },
-  { id: "reseaux", label: "Réseaux" },
-  { id: "politiques", label: "Politiques" },
+  { id: "type", label: "Type" }, { id: "general", label: "Général" },
+  { id: "media", label: "Couverture" }, { id: "contenu", label: "Contenu" },
+  { id: "prix", label: "Prix" }, { id: "paiement", label: "Paiement" },
+  { id: "reseaux", label: "Réseaux" }, { id: "politiques", label: "Politiques" },
   { id: "seo", label: "SEO" },
 ];
 
@@ -162,15 +103,26 @@ function calcPct(prix: number, promo: number): number {
 
 const EMPTY_RESEAUX: ReseauxSociaux = { instagram: "", tiktok: "", facebook: "", youtube: "", whatsapp: "", site_web: "" };
 
-// ─── Composant principal ──────────────────────────────────
+const RESEAUX_LINKS = [
+  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/...", icon: "📸" },
+  { key: "tiktok",    label: "TikTok",    placeholder: "https://tiktok.com/@...",   icon: "🎵" },
+  { key: "facebook",  label: "Facebook",  placeholder: "https://facebook.com/...",  icon: "👥" },
+  { key: "youtube",   label: "YouTube",   placeholder: "https://youtube.com/@...",  icon: "▶️" },
+  { key: "whatsapp",  label: "WhatsApp",  placeholder: "+229 XX XX XX XX",          icon: "💬" },
+  { key: "site_web",  label: "Site web",  placeholder: "https://votre-site.com",    icon: "🌐" },
+];
+
+// ─── Composant principal ──────────────────────────────────────────────────────
 export default function ProduitsPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileProduitRef = useRef<HTMLInputElement>(null);
 
-  // ── Onglet actif
-  const [onglet, setOnglet] = useState<"physique" | "numerique">("physique");
+  // ── Vérification premium
+  const isPremium = hasNexoraPremium();
 
+  const [onglet, setOnglet] = useState<"physique" | "numerique">("physique");
   const [boutique, setBoutique] = useState<any>(null);
   const [produitsPhysiques, setProduitsPhysiques] = useState<ProduitPhysique[]>([]);
   const [produitsDigitaux, setProduitsDigitaux] = useState<ProduitDigital[]>([]);
@@ -184,19 +136,13 @@ export default function ProduitsPage() {
   const [uploadingFichier, setUploadingFichier] = useState(false);
   const [searchQ, setSearchQ] = useState("");
 
-  // ── États spécifiques physique
   const [variations, setVariations] = useState<Variation[]>([]);
   const [newVarNom, setNewVarNom] = useState("");
   const [newVarValeurs, setNewVarValeurs] = useState("");
-
-  // ── États partagés
   const [newTag, setNewTag] = useState("");
   const [newPaiement, setNewPaiement] = useState<PaiementProduit>({ reseau: "", numero: "", nom_titulaire: "" });
-
-  // ── États spécifiques digital
   const [newModule, setNewModule] = useState<Module>({ titre: "", description: "" });
 
-  // ── Formulaire physique
   const emptyFormPhysique = {
     nom: "", description: "", prix: "", prix_promo: "",
     categorie: "", tags: [] as string[], stock: "0", stock_illimite: false,
@@ -207,7 +153,6 @@ export default function ProduitsPage() {
     poids: "", dimensions: "", sku: "", seo_titre: "", seo_description: "",
   };
 
-  // ── Formulaire digital
   const emptyFormDigital = {
     nom: "", description: "", prix: "", prix_promo: "",
     type_digital: "fichier" as TypeDigital, mode_tarification: "unique" as ModeTarification,
@@ -227,12 +172,11 @@ export default function ProduitsPage() {
   const pctP = formP.prix && formP.prix_promo ? calcPct(parseFloat(formP.prix), parseFloat(formP.prix_promo)) : 0;
   const pctD = formD.prix && formD.prix_promo ? calcPct(parseFloat(formD.prix), parseFloat(formD.prix_promo)) : 0;
 
-  // ── Chargement
   const load = async () => {
     setLoading(true);
     const { data: b } = await supabase.from("boutiques" as any).select("*").limit(1).single();
-    if (b) setBoutique(b);
     if (b) {
+      setBoutique(b);
       const { data: phys } = await supabase
         .from("produits" as any).select("*, variations_produit(*)")
         .eq("boutique_id", (b as any).id).eq("type", "physique")
@@ -242,7 +186,6 @@ export default function ProduitsPage() {
         moyens_paiement: p.moyens_paiement || [], tags: p.tags || [],
         reseaux_sociaux: p.reseaux_sociaux || {},
       })));
-
       const { data: digi } = await supabase
         .from("produits" as any).select("*")
         .eq("boutique_id", (b as any).id).eq("type", "numerique")
@@ -257,6 +200,38 @@ export default function ProduitsPage() {
 
   useEffect(() => { load(); }, []);
 
+  // ── Mur premium ──────────────────────────────────────────────────────────────
+  if (!isPremium) {
+    return (
+      <BoutiqueLayout boutiqueName="Nexora Shop">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center mb-6 shadow-lg">
+            <Crown className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-800 mb-2">Fonctionnalité Premium</h2>
+          <p className="text-gray-500 text-sm mb-1 max-w-xs">
+            La boutique est réservée aux membres <span className="font-bold text-yellow-600">Premium</span>.
+          </p>
+          <p className="text-gray-400 text-xs mb-8 max-w-xs">
+            Passez au plan Premium pour créer votre boutique, ajouter vos produits et gérer vos commandes.
+          </p>
+          <Button
+            onClick={() => navigate("/boutique/parametres")}
+            className="bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold px-8 py-3 rounded-xl shadow-md gap-2"
+          >
+            <Crown className="w-4 h-4" /> Passer à Premium
+          </Button>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Retour au tableau de bord
+          </button>
+        </div>
+      </BoutiqueLayout>
+    );
+  }
+
   // ── Upload photo
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -268,19 +243,15 @@ export default function ProduitsPage() {
       const { error } = await supabase.storage.from("mes-secrets-media").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("mes-secrets-media").getPublicUrl(path);
-      if (onglet === "physique") {
-        setFormP(prev => ({ ...prev, photos: [...prev.photos, urlData.publicUrl] }));
-      } else {
-        setFormD(prev => ({ ...prev, photos: [urlData.publicUrl] }));
-      }
-      toast({ title: "✅ Photo ajoutée !" });
+      if (onglet === "physique") setFormP(prev => ({ ...prev, photos: [...prev.photos, urlData.publicUrl] }));
+      else setFormD(prev => ({ ...prev, photos: [urlData.publicUrl] }));
+      toast({ title: "Photo ajoutée !" });
     } catch (err: any) {
       toast({ title: "Erreur upload", description: err.message, variant: "destructive" });
     }
     setUploadingPhoto(false);
   };
 
-  // ── Upload fichier digital
   const handleFichierUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -294,7 +265,7 @@ export default function ProduitsPage() {
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
         : `${(file.size / 1024).toFixed(0)} KB`;
       setFormD(prev => ({ ...prev, fichier_url: urlData.publicUrl, fichier_nom: file.name, fichier_taille: taille }));
-      toast({ title: "✅ Fichier uploadé !" });
+      toast({ title: "Fichier uploadé !" });
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
@@ -331,7 +302,6 @@ export default function ProduitsPage() {
     setNewPaiement({ reseau: "", numero: "", nom_titulaire: "" });
   };
 
-  // ── Submit physique
   const handleSubmitPhysique = async () => {
     if (!boutique) { toast({ title: "Configurez d'abord votre boutique", variant: "destructive" }); return; }
     if (!formP.nom || !formP.prix) { toast({ title: "Nom et prix obligatoires", variant: "destructive" }); return; }
@@ -367,11 +337,10 @@ export default function ProduitsPage() {
         variations.map(v => ({ produit_id: produitId, nom: v.nom, valeurs: v.valeurs }))
       );
     }
-    toast({ title: `✅ Produit ${editingId ? "modifié" : "créé"} !` });
+    toast({ title: `Produit ${editingId ? "modifié" : "créé"} avec succès !` });
     setShowForm(false); setFormP(emptyFormPhysique); setVariations([]); setEditingId(null); setSaving(false); load();
   };
 
-  // ── Submit digital
   const handleSubmitDigital = async () => {
     if (!boutique) { toast({ title: "Configurez d'abord votre boutique", variant: "destructive" }); return; }
     if (!formD.nom || !formD.prix) { toast({ title: "Nom et prix obligatoires", variant: "destructive" }); return; }
@@ -403,7 +372,7 @@ export default function ProduitsPage() {
       ({ error } = await supabase.from("produits" as any).insert(payload));
     }
     if (error) { toast({ title: "Erreur", description: error.message, variant: "destructive" }); setSaving(false); return; }
-    toast({ title: `✅ Produit ${editingId ? "modifié" : "créé"} !` });
+    toast({ title: `Produit ${editingId ? "modifié" : "créé"} avec succès !` });
     setShowForm(false); setFormD(emptyFormDigital); setEditingId(null); setSaving(false); load();
   };
 
@@ -469,15 +438,6 @@ export default function ProduitsPage() {
   };
 
   const TypeIconD = TYPES_DIGITAL[formD.type_digital]?.icon || FileText;
-
-  const RESEAUX_LINKS = [
-    { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/...", icon: "📸" },
-    { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@...", icon: "🎵" },
-    { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/...", icon: "👥" },
-    { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@...", icon: "▶️" },
-    { key: "whatsapp", label: "WhatsApp", placeholder: "+229 XX XX XX XX", icon: "💬" },
-    { key: "site_web", label: "Site web", placeholder: "https://votre-site.com", icon: "🌐" },
-  ];
 
   return (
     <BoutiqueLayout boutiqueName={boutique?.nom} boutiqueSlug={boutique?.slug}>
@@ -633,7 +593,7 @@ export default function ProduitsPage() {
                   )}
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto} className="w-full gap-2">
-                    <Image className="w-4 h-4" /> {uploadingPhoto ? "Upload..." : "📱 Choisir depuis l'appareil"}
+                    <Image className="w-4 h-4" /> {uploadingPhoto ? "Upload en cours..." : "Choisir depuis l'appareil"}
                   </Button>
                   <div className="flex gap-2">
                     <Input value={formP.photo_url} onChange={e => setFormP({ ...formP, photo_url: e.target.value })} placeholder="https://... URL" className="flex-1" />
@@ -657,7 +617,7 @@ export default function ProduitsPage() {
                     <div>
                       <label className="text-sm font-semibold text-gray-700">Prix promo</label>
                       <Input type="number" min="0" value={formP.prix_promo} onChange={e => setFormP({ ...formP, prix_promo: e.target.value })} placeholder="0" className="mt-1" />
-                      {pctP > 0 && <p className="text-xs text-green-600 font-bold mt-1">🎉 -{pctP}%</p>}
+                      {pctP > 0 && <p className="text-xs text-green-600 font-bold mt-1">-{pctP}%</p>}
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-3 space-y-3">
@@ -700,7 +660,7 @@ export default function ProduitsPage() {
                     </div>
                   ))}
                   <div className="border border-dashed border-pink-200 rounded-xl p-4 space-y-3">
-                    <p className="text-xs font-semibold text-gray-500">➕ Nouvelle variation</p>
+                    <p className="text-xs font-semibold text-gray-500">Nouvelle variation</p>
                     <Input value={newVarNom} onChange={e => setNewVarNom(e.target.value)} placeholder="Nom (ex: Taille, Couleur)" />
                     <Input value={newVarValeurs} onChange={e => setNewVarValeurs(e.target.value)} placeholder="Valeurs séparées par virgule" />
                     <Button type="button" size="sm" onClick={addVariation} className="w-full bg-pink-500 text-white gap-1">
@@ -732,7 +692,7 @@ export default function ProduitsPage() {
                     </div>
                   ))}
                   <div className="border border-dashed border-pink-200 rounded-xl p-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-500">➕ Mobile Money</p>
+                    <p className="text-xs font-semibold text-gray-500">Mobile Money</p>
                     <Input value={newPaiement.reseau} onChange={e => setNewPaiement(prev => ({ ...prev, reseau: e.target.value }))} placeholder="MTN MoMo, Wave, Orange..." />
                     <Input value={newPaiement.nom_titulaire} onChange={e => setNewPaiement(prev => ({ ...prev, nom_titulaire: e.target.value }))} placeholder="Nom du titulaire" />
                     <Input value={newPaiement.numero} onChange={e => setNewPaiement(prev => ({ ...prev, numero: e.target.value }))} placeholder="Numéro de téléphone" />
@@ -763,13 +723,13 @@ export default function ProduitsPage() {
                     <p className="text-xs text-yellow-600">Ces politiques rassurent vos clients.</p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">🔄 Politique de remboursement</label>
+                    <label className="text-sm font-semibold text-gray-700">Politique de remboursement</label>
                     <textarea value={formP.politique_remboursement} onChange={e => setFormP({ ...formP, politique_remboursement: e.target.value })}
                       placeholder="Ex: Remboursement accepté dans les 7 jours..."
                       className="mt-1 w-full h-32 px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-pink-300" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">🔒 Politique de confidentialité</label>
+                    <label className="text-sm font-semibold text-gray-700">Politique de confidentialité</label>
                     <textarea value={formP.politique_confidentialite} onChange={e => setFormP({ ...formP, politique_confidentialite: e.target.value })}
                       placeholder="Ex: Vos données sont utilisées uniquement pour traiter votre commande..."
                       className="mt-1 w-full h-32 px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-pink-300" />
@@ -781,7 +741,7 @@ export default function ProduitsPage() {
               {activeSection === "seo" && (
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                    <p className="text-xs text-blue-700">🔍 Optimisez pour Google.</p>
+                    <p className="text-xs text-blue-700">Optimisez votre produit pour Google.</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Titre SEO</label>
@@ -809,7 +769,7 @@ export default function ProduitsPage() {
               <div className="flex gap-2 pt-4 border-t border-gray-100">
                 <Button type="button" variant="outline" onClick={resetForm} className="flex-1">Annuler</Button>
                 <Button type="button" onClick={handleSubmitPhysique} disabled={saving} className="flex-1 bg-pink-500 hover:bg-pink-600 text-white">
-                  {saving ? "Sauvegarde..." : editingId ? "✅ Modifier" : "✅ Créer"}
+                  {saving ? "Sauvegarde..." : editingId ? "Modifier" : "Créer le produit"}
                 </Button>
               </div>
             </div>
@@ -866,7 +826,7 @@ export default function ProduitsPage() {
                       {(Object.entries(MODES_TARIFICATION) as [ModeTarification, string][]).map(([key, label]) => (
                         <button key={key} type="button" onClick={() => setFormD(prev => ({ ...prev, mode_tarification: key }))}
                           className={`py-2 px-3 rounded-xl text-xs font-medium border-2 transition-colors text-left ${formD.mode_tarification === key ? "border-pink-500 bg-pink-50 text-pink-700" : "border-gray-200 text-gray-600"}`}>
-                          {key === "unique" ? "💳 " : key === "abonnement_mensuel" ? "📅 " : key === "abonnement_annuel" ? "🗓️ " : "💰 "}{label}
+                          {label}
                         </button>
                       ))}
                     </div>
@@ -944,7 +904,7 @@ export default function ProduitsPage() {
                   )}
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto} className="w-full gap-2">
-                    <Image className="w-4 h-4" /> {uploadingPhoto ? "Upload..." : "📱 Choisir une image de couverture"}
+                    <Image className="w-4 h-4" /> {uploadingPhoto ? "Upload en cours..." : "Choisir une image de couverture"}
                   </Button>
                   <div className="flex gap-2">
                     <Input value={formD.photo_url} onChange={e => setFormD({ ...formD, photo_url: e.target.value })} placeholder="ou URL de l'image" className="flex-1" />
@@ -976,7 +936,7 @@ export default function ProduitsPage() {
                       )}
                       <input ref={fileProduitRef} type="file" className="hidden" onChange={handleFichierUpload} />
                       <Button type="button" variant="outline" onClick={() => fileProduitRef.current?.click()} disabled={uploadingFichier} className="w-full gap-2">
-                        <Download className="w-4 h-4" /> {uploadingFichier ? "Upload..." : "📤 Uploader le fichier (PDF, ZIP, MP3...)"}
+                        <Download className="w-4 h-4" /> {uploadingFichier ? "Upload en cours..." : "Uploader le fichier (PDF, ZIP, MP3...)"}
                       </Button>
                       <div>
                         <label className="text-sm font-medium">ou URL du fichier</label>
@@ -1006,7 +966,7 @@ export default function ProduitsPage() {
                         </div>
                       ))}
                       <div className="border border-dashed border-pink-200 rounded-xl p-3 space-y-2">
-                        <p className="text-xs font-semibold text-gray-500">➕ Nouveau module</p>
+                        <p className="text-xs font-semibold text-gray-500">Nouveau module</p>
                         <Input value={newModule.titre} onChange={e => setNewModule(prev => ({ ...prev, titre: e.target.value }))} placeholder="Titre du module" />
                         <Input value={newModule.description} onChange={e => setNewModule(prev => ({ ...prev, description: e.target.value }))} placeholder="Description (optionnel)" />
                         <Button type="button" size="sm" onClick={addModule} className="w-full bg-pink-500 text-white gap-1"><Plus className="w-3 h-3" /> Ajouter</Button>
@@ -1016,7 +976,7 @@ export default function ProduitsPage() {
 
                   {formD.type_digital === "service" && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                      <p className="text-xs text-blue-700 font-medium mb-1">💡 Service sur mesure</p>
+                      <p className="text-xs text-blue-700 font-medium mb-1">Service sur mesure</p>
                       <p className="text-xs text-blue-600">Décrivez votre service dans Général. Les clients vous contacteront après commande.</p>
                     </div>
                   )}
@@ -1070,7 +1030,7 @@ export default function ProduitsPage() {
                     <div>
                       <label className="text-sm font-semibold text-gray-700">Prix promo</label>
                       <Input type="number" min="0" value={formD.prix_promo} onChange={e => setFormD({ ...formD, prix_promo: e.target.value })} placeholder="0" className="mt-1" />
-                      {pctD > 0 && <p className="text-xs text-green-600 font-bold mt-1">🎉 -{pctD}%</p>}
+                      {pctD > 0 && <p className="text-xs text-green-600 font-bold mt-1">-{pctD}%</p>}
                     </div>
                   </div>
                   <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
@@ -1095,7 +1055,7 @@ export default function ProduitsPage() {
                     </div>
                   ))}
                   <div className="border border-dashed border-pink-200 rounded-xl p-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-500">➕ Mobile Money</p>
+                    <p className="text-xs font-semibold text-gray-500">Mobile Money</p>
                     <Input value={newPaiement.reseau} onChange={e => setNewPaiement(prev => ({ ...prev, reseau: e.target.value }))} placeholder="MTN MoMo, Wave, Orange..." />
                     <Input value={newPaiement.nom_titulaire} onChange={e => setNewPaiement(prev => ({ ...prev, nom_titulaire: e.target.value }))} placeholder="Nom du titulaire" />
                     <Input value={newPaiement.numero} onChange={e => setNewPaiement(prev => ({ ...prev, numero: e.target.value }))} placeholder="Numéro de téléphone" />
@@ -1126,13 +1086,13 @@ export default function ProduitsPage() {
                     <p className="text-xs text-yellow-600">Ces politiques rassurent vos clients et protègent votre business.</p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">🔄 Politique de remboursement</label>
+                    <label className="text-sm font-semibold text-gray-700">Politique de remboursement</label>
                     <textarea value={formD.politique_remboursement} onChange={e => setFormD({ ...formD, politique_remboursement: e.target.value })}
                       placeholder="Ex: Aucun remboursement après téléchargement..."
                       className="mt-1 w-full h-28 px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-pink-300" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">🔒 Politique de confidentialité</label>
+                    <label className="text-sm font-semibold text-gray-700">Politique de confidentialité</label>
                     <textarea value={formD.politique_confidentialite} onChange={e => setFormD({ ...formD, politique_confidentialite: e.target.value })}
                       placeholder="Ex: Vos données sont utilisées uniquement..."
                       className="mt-1 w-full h-28 px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:border-pink-300" />
@@ -1144,7 +1104,7 @@ export default function ProduitsPage() {
               {activeSection === "seo" && (
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                    <p className="text-xs text-blue-700">🔍 Optimisez votre produit pour Google.</p>
+                    <p className="text-xs text-blue-700">Optimisez votre produit pour Google.</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700">Titre SEO</label>
@@ -1172,7 +1132,7 @@ export default function ProduitsPage() {
               <div className="flex gap-2 pt-4 border-t border-gray-100">
                 <Button type="button" variant="outline" onClick={resetForm} className="flex-1">Annuler</Button>
                 <Button type="button" onClick={handleSubmitDigital} disabled={saving} className="flex-1 bg-pink-500 hover:bg-pink-600 text-white">
-                  {saving ? "Sauvegarde..." : editingId ? "✅ Modifier" : "✅ Créer"}
+                  {saving ? "Sauvegarde..." : editingId ? "Modifier" : "Créer le produit"}
                 </Button>
               </div>
             </div>
@@ -1263,9 +1223,9 @@ export default function ProduitsPage() {
                         <div>
                           <p className="text-xs font-semibold text-gray-500 mb-1">Paiements</p>
                           <div className="flex gap-2 flex-wrap">
-                            {produit.paiement_reception && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg">✅ À la réception</span>}
-                            {produit.paiement_lien && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">🔗 Lien</span>}
-                            {(produit.moyens_paiement || []).map((mp, i) => <span key={i} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-lg">📱 {mp.reseau}</span>)}
+                            {produit.paiement_reception && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg">À la réception</span>}
+                            {produit.paiement_lien && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">Lien de paiement</span>}
+                            {(produit.moyens_paiement || []).map((mp, i) => <span key={i} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-lg">{mp.reseau}</span>)}
                           </div>
                         </div>
                       </div>
