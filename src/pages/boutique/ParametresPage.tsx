@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BoutiqueLayout from "@/components/BoutiqueLayout";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import {
   Store, Globe, Facebook, Bell, Save,
   Eye, EyeOff, Image, Phone
@@ -18,14 +19,15 @@ const PAYS = [
 const DEVISES = ["XOF", "USD", "EUR", "GHS", "NGN"];
 
 const TABS = [
-  { id: "general", label: "Général", icon: Store },
-  { id: "pixel", label: "Facebook Pixel", icon: Facebook },
-  { id: "domaine", label: "Domaine", icon: Globe },
-  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "general",       label: "Général",          icon: Store    },
+  { id: "pixel",         label: "Facebook Pixel",   icon: Facebook },
+  { id: "domaine",       label: "Domaine",          icon: Globe    },
+  { id: "notifications", label: "Notifications",    icon: Bell     },
 ];
 
 interface Boutique {
   id?: string;
+  user_id?: string;
   nom: string;
   slug: string;
   description: string;
@@ -62,20 +64,28 @@ const defaultBoutique: Boutique = {
 
 export default function BoutiqueParametresPage() {
   const { toast } = useToast();
-  const fileLogoRef = useRef<HTMLInputElement>(null);
+  const fileLogoRef     = useRef<HTMLInputElement>(null);
   const fileBanniereRef = useRef<HTMLInputElement>(null);
-  const [boutique, setBoutique] = useState<Boutique>(defaultBoutique);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
-  const [showToken, setShowToken] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const [boutique, setBoutique]               = useState<Boutique>(defaultBoutique);
+  const [loading, setLoading]                 = useState(true);
+  const [saving, setSaving]                   = useState(false);
+  const [activeTab, setActiveTab]             = useState("general");
+  const [showToken, setShowToken]             = useState(false);
+  const [uploadingLogo, setUploadingLogo]     = useState(false);
   const [uploadingBanniere, setUploadingBanniere] = useState(false);
+
+  const currentUser = getNexoraUser();
 
   const load = async () => {
     setLoading(true);
+    // Charger la boutique de l'utilisateur connecté
     const { data } = await supabase
-      .from("boutiques" as any).select("*").limit(1).single();
+      .from("boutiques" as any)
+      .select("*")
+      .eq("user_id", currentUser?.id)
+      .limit(1)
+      .maybeSingle();
     if (data) setBoutique({ ...defaultBoutique, ...(data as any) });
     setLoading(false);
   };
@@ -88,7 +98,6 @@ export default function BoutiqueParametresPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-  // Upload image
   const handleUpload = async (
     file: File,
     field: "logo_url" | "banniere_url",
@@ -96,7 +105,7 @@ export default function BoutiqueParametresPage() {
   ) => {
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      const ext  = file.name.split(".").pop();
       const path = `boutique/${field}_${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("mes-secrets-media")
@@ -105,7 +114,7 @@ export default function BoutiqueParametresPage() {
       const { data: urlData } = supabase.storage
         .from("mes-secrets-media").getPublicUrl(path);
       setBoutique(prev => ({ ...prev, [field]: urlData.publicUrl }));
-      toast({ title: "✅ Image uploadée !" });
+      toast({ title: "Image uploadée !" });
     } catch (err: any) {
       toast({ title: "Erreur upload", description: err.message, variant: "destructive" });
     }
@@ -116,9 +125,14 @@ export default function BoutiqueParametresPage() {
     if (!boutique.nom || !boutique.email) {
       toast({ title: "Nom et email obligatoires", variant: "destructive" }); return;
     }
+    if (!currentUser?.id) {
+      toast({ title: "Utilisateur non connecté", variant: "destructive" }); return;
+    }
     setSaving(true);
+
     const payload = {
       ...boutique,
+      user_id: currentUser.id,
       slug: boutique.slug || genSlug(boutique.nom),
     };
 
@@ -129,13 +143,14 @@ export default function BoutiqueParametresPage() {
       const { error: err, data } = await supabase
         .from("boutiques" as any).insert(payload).select().single();
       error = err;
-      if (data) setBoutique({ ...boutique, id: (data as any).id });
+      if (data) setBoutique({ ...boutique, id: (data as any).id, user_id: currentUser.id });
     }
 
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "✅ Boutique sauvegardée !" });
+      toast({ title: "Boutique sauvegardée !" });
+      load();
     }
     setSaving(false);
   };
@@ -149,8 +164,9 @@ export default function BoutiqueParametresPage() {
   );
 
   return (
-    <BoutiqueLayout boutiqueName={boutique?.nom} boutiqueSlug={boutique?.slug}>
+    <BoutiqueLayout boutiqueName={boutique?.nom || "Ma Boutique"} boutiqueSlug={boutique?.slug}>
       <div className="space-y-5 pb-10">
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -204,26 +220,18 @@ export default function BoutiqueParametresPage() {
         {/* ── TAB Général ── */}
         {activeTab === "general" && (
           <div className="space-y-4">
-            {/* Infos de base */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-4">
               <p className="font-semibold text-sm text-pink-600">Informations générales</p>
-
               <div>
                 <label className="text-sm font-medium">Nom de la boutique *</label>
                 <Input value={boutique.nom}
-                  onChange={e => setBoutique(prev => ({
-                    ...prev, nom: e.target.value,
-                    slug: genSlug(e.target.value)
-                  }))}
+                  onChange={e => setBoutique(prev => ({ ...prev, nom: e.target.value, slug: genSlug(e.target.value) }))}
                   placeholder="Ma Super Boutique" className="mt-1" />
               </div>
-
               <div>
                 <label className="text-sm font-medium">URL de la boutique</label>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-2 rounded-md whitespace-nowrap">
-                    /shop/
-                  </span>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-2 rounded-md whitespace-nowrap">/shop/</span>
                   <Input value={boutique.slug}
                     onChange={e => setBoutique(prev => ({ ...prev, slug: genSlug(e.target.value) }))}
                     placeholder="ma-boutique" className="flex-1" />
@@ -234,7 +242,6 @@ export default function BoutiqueParametresPage() {
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="text-sm font-medium">Description</label>
                 <textarea value={boutique.description}
@@ -242,7 +249,6 @@ export default function BoutiqueParametresPage() {
                   placeholder="Décrivez votre boutique..."
                   className="mt-1 w-full h-20 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none" />
               </div>
-
               <div>
                 <label className="text-sm font-medium">Devise</label>
                 <select value={boutique.devise}
@@ -253,17 +259,14 @@ export default function BoutiqueParametresPage() {
               </div>
             </div>
 
-            {/* Logo + Bannière */}
+            {/* Images */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-4">
               <p className="font-semibold text-sm text-pink-600">Images</p>
-
-              {/* Logo */}
               <div>
                 <label className="text-sm font-medium">Logo de la boutique</label>
                 <div className="mt-2 flex items-center gap-3">
                   {boutique.logo_url ? (
-                    <img src={boutique.logo_url} alt="Logo"
-                      className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+                    <img src={boutique.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
                   ) : (
                     <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
                       <Store className="w-6 h-6 text-gray-300" />
@@ -284,14 +287,11 @@ export default function BoutiqueParametresPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Bannière */}
               <div>
                 <label className="text-sm font-medium">Bannière</label>
                 <div className="mt-2 space-y-2">
                   {boutique.banniere_url && (
-                    <img src={boutique.banniere_url} alt="Bannière"
-                      className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+                    <img src={boutique.banniere_url} alt="Bannière" className="w-full h-24 object-cover rounded-xl border border-gray-200" />
                   )}
                   <input ref={fileBanniereRef} type="file" accept="image/*" className="hidden"
                     onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], "banniere_url", setUploadingBanniere)} />
@@ -311,14 +311,12 @@ export default function BoutiqueParametresPage() {
             {/* Contact */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-4">
               <p className="font-semibold text-sm text-pink-600">Contact vendeur</p>
-
               <div>
                 <label className="text-sm font-medium">Email *</label>
                 <Input type="email" value={boutique.email}
                   onChange={e => setBoutique(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="contact@maboutique.com" className="mt-1" />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium">WhatsApp</label>
@@ -339,7 +337,6 @@ export default function BoutiqueParametresPage() {
                   </div>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium">Pays</label>
@@ -356,7 +353,6 @@ export default function BoutiqueParametresPage() {
                     placeholder="Cotonou" className="mt-1" />
                 </div>
               </div>
-
               <div>
                 <label className="text-sm font-medium">Adresse</label>
                 <Input value={boutique.adresse}
@@ -375,11 +371,7 @@ export default function BoutiqueParametresPage() {
                 <Facebook className="w-5 h-5 text-blue-600" />
                 <p className="font-semibold text-sm text-gray-800">Pixel Facebook</p>
               </div>
-
-              <p className="text-xs text-gray-500">
-                Suivez les visites, ajouts au panier et achats sur votre boutique.
-              </p>
-
+              <p className="text-xs text-gray-500">Suivez les visites, ajouts au panier et achats sur votre boutique.</p>
               <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-xl">
                 <div>
                   <p className="font-medium text-sm">Activer le Pixel</p>
@@ -390,24 +382,18 @@ export default function BoutiqueParametresPage() {
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${boutique.pixel_actif ? "left-7" : "left-1"}`} />
                 </button>
               </div>
-
               <div>
                 <label className="text-sm font-medium">ID Pixel Facebook</label>
                 <Input value={boutique.pixel_facebook_id}
                   onChange={e => setBoutique(prev => ({ ...prev, pixel_facebook_id: e.target.value }))}
                   placeholder="123456789012345" className="mt-1 font-mono" />
-                <p className="text-xs text-gray-400 mt-1">
-                  Trouvez-le dans Facebook Events Manager
-                </p>
+                <p className="text-xs text-gray-400 mt-1">Trouvez-le dans Facebook Events Manager</p>
               </div>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-4">
               <p className="font-semibold text-sm text-blue-700">API Conversions</p>
-              <p className="text-xs text-gray-500">
-                Plus fiable que le Pixel — contourne les bloqueurs de publicité.
-              </p>
-
+              <p className="text-xs text-gray-500">Plus fiable que le Pixel — contourne les bloqueurs de publicité.</p>
               <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-xl">
                 <div>
                   <p className="font-medium text-sm">Activer l'API Conversions</p>
@@ -418,12 +404,10 @@ export default function BoutiqueParametresPage() {
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${boutique.api_conversion_actif ? "left-7" : "left-1"}`} />
                 </button>
               </div>
-
               <div>
                 <label className="text-sm font-medium">Token d'accès API</label>
                 <div className="flex gap-2 mt-1">
-                  <Input
-                    type={showToken ? "text" : "password"}
+                  <Input type={showToken ? "text" : "password"}
                     value={boutique.api_conversion_token}
                     onChange={e => setBoutique(prev => ({ ...prev, api_conversion_token: e.target.value }))}
                     placeholder="EAAxxxxxxxx..." className="font-mono flex-1" />
@@ -433,9 +417,8 @@ export default function BoutiqueParametresPage() {
                   </button>
                 </div>
               </div>
-
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-                <p className="text-xs font-semibold text-yellow-800 mb-1">📋 Événements trackés :</p>
+                <p className="text-xs font-semibold text-yellow-800 mb-1">Événements trackés :</p>
                 <ul className="text-xs text-yellow-700 space-y-0.5">
                   <li>• <strong>PageView</strong> — visite boutique</li>
                   <li>• <strong>ViewContent</strong> — vue produit</li>
@@ -456,21 +439,18 @@ export default function BoutiqueParametresPage() {
                 <Globe className="w-5 h-5 text-pink-500" />
                 <p className="font-semibold text-sm text-gray-800">Domaine personnalisé</p>
               </div>
-
               <div className="bg-pink-50 border border-pink-100 rounded-xl p-3">
                 <p className="text-xs font-semibold text-pink-700 mb-1">URL actuelle :</p>
                 <p className="text-sm font-mono text-pink-600 break-all">
                   https://budget-and-vault.vercel.app/shop/{boutique.slug || "votre-slug"}
                 </p>
               </div>
-
               <div>
                 <label className="text-sm font-medium">Votre domaine</label>
                 <Input value={boutique.domaine_personnalise}
                   onChange={e => setBoutique(prev => ({ ...prev, domaine_personnalise: e.target.value }))}
                   placeholder="www.maboutique.com" className="mt-1 font-mono" />
               </div>
-
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                 <div>
                   <p className="font-medium text-sm">Activer le domaine</p>
@@ -481,9 +461,8 @@ export default function BoutiqueParametresPage() {
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${boutique.domaine_actif ? "left-7" : "left-1"}`} />
                 </button>
               </div>
-
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
-                <p className="text-xs font-semibold text-gray-600">📋 Configuration DNS :</p>
+                <p className="text-xs font-semibold text-gray-600">Configuration DNS :</p>
                 <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
                   <li>Achetez votre domaine (Namecheap, GoDaddy...)</li>
                   <li>Allez dans la gestion DNS</li>
@@ -512,11 +491,9 @@ export default function BoutiqueParametresPage() {
                 <Bell className="w-5 h-5 text-pink-500" />
                 <p className="font-semibold text-sm text-gray-800">Notifications Push</p>
               </div>
-
               <p className="text-xs text-gray-500">
                 Recevez une notification sur votre téléphone dès qu'une commande arrive.
               </p>
-
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                 <div>
                   <p className="font-medium text-sm">Activer les notifications</p>
@@ -527,15 +504,14 @@ export default function BoutiqueParametresPage() {
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${boutique.notifications_actives ? "left-7" : "left-1"}`} />
                 </button>
               </div>
-
               <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white gap-2"
                 onClick={async () => {
                   try {
                     const permission = await Notification.requestPermission();
                     if (permission === "granted") {
-                      toast({ title: "✅ Notifications activées !" });
+                      toast({ title: "Notifications activées !" });
                     } else {
-                      toast({ title: "❌ Permission refusée", variant: "destructive" });
+                      toast({ title: "Permission refusée", variant: "destructive" });
                     }
                   } catch {
                     toast({ title: "Non supporté sur cet appareil", variant: "destructive" });
@@ -544,9 +520,8 @@ export default function BoutiqueParametresPage() {
                 <Bell className="w-4 h-4" />
                 Activer sur cet appareil
               </Button>
-
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-                <p className="text-xs font-semibold text-yellow-800 mb-1">📱 Sur mobile :</p>
+                <p className="text-xs font-semibold text-yellow-800 mb-1">Sur mobile :</p>
                 <ol className="text-xs text-yellow-700 space-y-1 list-decimal list-inside">
                   <li>Ouvrez la boutique dans Chrome</li>
                   <li>Cliquez "Ajouter à l'écran d'accueil"</li>
@@ -558,12 +533,13 @@ export default function BoutiqueParametresPage() {
           </div>
         )}
 
-        {/* Bouton sauvegarder */}
+        {/* Bouton sauvegarder bas */}
         <Button onClick={handleSave} disabled={saving}
           className="w-full bg-pink-500 hover:bg-pink-600 text-white py-3 text-base font-bold gap-2">
           <Save className="w-5 h-5" />
           {saving ? "Sauvegarde..." : "Sauvegarder les paramètres"}
         </Button>
+
       </div>
     </BoutiqueLayout>
   );
