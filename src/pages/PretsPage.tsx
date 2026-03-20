@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatAmount } from "@/lib/app-utils";
+import { hasNexoraPremium } from "@/lib/nexora-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, FileDown, ChevronDown, ChevronUp, Trash2, HandCoins, Wallet, Calendar, ArrowRight } from "lucide-react";
+import { Plus, FileDown, ChevronDown, ChevronUp, Trash2, HandCoins, Wallet, Calendar, ArrowRight, Crown } from "lucide-react";
 import SignaturePad from "@/components/SignaturePad";
 import AppLayout from "@/components/AppLayout";
+import { useNavigate } from "react-router-dom";
 
 type Devise = "XOF" | "USD";
 type Statut = "en_attente" | "partiel" | "rembourse";
@@ -52,6 +54,7 @@ const STATUT_COLORS: Record<Statut, string> = {
 };
 
 const MOI = "Eric Kpakpo";
+const LIMITE_GRATUIT = 5;
 
 async function generatePDF(pret: Pret) {
   const jspdf = await import("jspdf");
@@ -66,12 +69,9 @@ async function generatePDF(pret: Pret) {
   const noir: [number, number, number] = [15, 23, 42];
   const vert: [number, number, number] = [22, 163, 74];
 
-  // Si type = "pret" → MOI = prêteur, l'autre = emprunteur
-  // Si type = "dette" → l'autre = prêteur, MOI = emprunteur
   const preteur = pret.type === "pret" ? MOI : pret.nom_personne;
   const emprunteur = pret.type === "pret" ? pret.nom_personne : MOI;
 
-  // En-tête
   doc.setFillColor(...bleu);
   doc.rect(0, 0, W, 40, "F");
   doc.setTextColor(255, 255, 255);
@@ -90,7 +90,6 @@ async function generatePDF(pret: Pret) {
 
   let y = 52;
 
-  // Bloc infos
   doc.setFillColor(...bleuClair);
   doc.roundedRect(margin, y, W - margin * 2, 56, 3, 3, "F");
   doc.setTextColor(...bleu);
@@ -123,7 +122,6 @@ async function generatePDF(pret: Pret) {
 
   y += 66;
 
-  // Échéance
   if (pret.date_echeance) {
     doc.setFillColor(254, 249, 195);
     doc.roundedRect(margin, y, W - margin * 2, 12, 2, 2, "F");
@@ -137,7 +135,6 @@ async function generatePDF(pret: Pret) {
     y += 20;
   }
 
-  // Corps du contrat
   doc.setTextColor(...noir);
   doc.setFontSize(10);
 
@@ -180,7 +177,6 @@ async function generatePDF(pret: Pret) {
 
   y += 8;
 
-  // Statut
   const statutColor: [number, number, number] =
     pret.statut === "rembourse" ? vert :
     pret.statut === "partiel" ? [59, 130, 246] :
@@ -196,7 +192,6 @@ async function generatePDF(pret: Pret) {
   );
   y += 22;
 
-  // Signatures
   if (y > 220) { doc.addPage(); y = 20; }
 
   doc.setFillColor(...bleuClair);
@@ -234,7 +229,6 @@ async function generatePDF(pret: Pret) {
   await drawSigBox("EMPRUNTEUR", pret.signature_emprunteur, emprunteur, margin + sigW + 5);
   await drawSigBox("TEMOIN", pret.signature_temoin, pret.nom_temoin || "—", margin + (sigW + 5) * 2);
 
-  // Pied de page
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   doc.setFillColor(...bleu);
   doc.rect(0, 282, W, 15, "F");
@@ -248,6 +242,9 @@ async function generatePDF(pret: Pret) {
 
 export default function PretsPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isPremium = hasNexoraPremium();
+
   const [prets, setPrets] = useState<Pret[]>([]);
   const [remboursements, setRemboursements] = useState<Remboursement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,17 +254,10 @@ export default function PretsPage() {
   const [showRembForm, setShowRembForm] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    nom_personne: "",
-    montant: "",
-    devise: "XOF" as Devise,
-    objectif: "",
-    date_pret: new Date().toISOString().split("T")[0],
-    date_echeance: "",
-    nom_temoin: "",
-    note: "",
-    signature_preteur: "",
-    signature_emprunteur: "",
-    signature_temoin: "",
+    nom_personne: "", montant: "", devise: "XOF" as Devise, objectif: "",
+    date_pret: new Date().toISOString().split("T")[0], date_echeance: "",
+    nom_temoin: "", note: "",
+    signature_preteur: "", signature_emprunteur: "", signature_temoin: "",
   });
 
   const [rembForm, setRembForm] = useState({ montant: "", note: "" });
@@ -285,12 +275,30 @@ export default function PretsPage() {
 
   useEffect(() => { load(); }, []);
 
+  // Compteurs par type
+  const nbPrets = prets.filter(p => p.type === "pret").length;
+  const nbDettes = prets.filter(p => p.type === "dette").length;
+  const nbActuel = activeTab === "pret" ? nbPrets : nbDettes;
+  const limiteAtteinte = !isPremium && nbActuel >= LIMITE_GRATUIT;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Vérification quota gratuit
+    if (!isPremium && nbActuel >= LIMITE_GRATUIT) {
+      toast({
+        title: "Limite atteinte",
+        description: `Le plan gratuit est limité à ${LIMITE_GRATUIT} ${activeTab === "pret" ? "prêts" : "dettes"}. Passez au Premium pour continuer.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!form.nom_personne || !form.montant || !form.objectif) {
       toast({ title: "Champs requis", description: "Nom, montant et objectif sont obligatoires.", variant: "destructive" });
       return;
     }
+
     const { error } = await supabase.from("prets" as any).insert({
       type: activeTab,
       nom_personne: form.nom_personne,
@@ -305,11 +313,13 @@ export default function PretsPage() {
       signature_emprunteur: form.signature_emprunteur || null,
       signature_temoin: form.signature_temoin || null,
     });
+
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "✅ Enregistré", description: `${activeTab === "pret" ? "Prêt" : "Dette"} ajouté avec succès !` });
+
+    toast({ title: "Enregistré", description: `${activeTab === "pret" ? "Prêt" : "Dette"} ajouté avec succès.` });
     setShowForm(false);
     setForm({ nom_personne: "", montant: "", devise: "XOF", objectif: "", date_pret: new Date().toISOString().split("T")[0], date_echeance: "", nom_temoin: "", note: "", signature_preteur: "", signature_emprunteur: "", signature_temoin: "" });
     load();
@@ -325,7 +335,7 @@ export default function PretsPage() {
     });
     if (!error) {
       await supabase.from("prets" as any).update({ montant_rembourse: nouveauTotal, statut: nouveauStatut }).eq("id", pret.id);
-      toast({ title: "✅ Remboursement enregistré !" });
+      toast({ title: "Remboursement enregistré" });
       setShowRembForm(null);
       setRembForm({ montant: "", note: "" });
       load();
@@ -342,23 +352,59 @@ export default function PretsPage() {
   const filteredPrets = prets.filter(p => p.type === activeTab);
   const rembPour = (id: string) => remboursements.filter(r => r.pret_id === id);
 
-  // Labels selon le type
   const preteurLabel = activeTab === "pret" ? MOI : form.nom_personne || "...";
   const emprunteurLabel = activeTab === "pret" ? form.nom_personne || "..." : MOI;
 
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6">
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-foreground">Prêts & Dettes</h1>
             <p className="text-sm text-muted-foreground">Gérez vos contrats de prêt</p>
           </div>
-          <Button onClick={() => setShowForm(!showForm)} className="bg-primary text-white gap-1">
+          <Button
+            onClick={() => {
+              if (limiteAtteinte) {
+                toast({
+                  title: "Limite atteinte",
+                  description: `Plan gratuit limité à ${LIMITE_GRATUIT} ${activeTab === "pret" ? "prêts" : "dettes"}.`,
+                  variant: "destructive",
+                });
+                return;
+              }
+              setShowForm(!showForm);
+            }}
+            className="bg-primary text-white gap-1"
+          >
             <Plus className="w-4 h-4" /> Nouveau
           </Button>
         </div>
+
+        {/* Bannière limite gratuit */}
+        {!isPremium && (
+          <div className={`rounded-xl px-4 py-3 flex items-center justify-between gap-3 border ${
+            nbActuel >= LIMITE_GRATUIT
+              ? "bg-red-50 border-red-200"
+              : "bg-yellow-50 border-yellow-200"
+          }`}>
+            <div className="flex items-center gap-2 min-w-0">
+              <Crown className={`w-4 h-4 flex-shrink-0 ${nbActuel >= LIMITE_GRATUIT ? "text-red-500" : "text-yellow-600"}`} />
+              <p className={`text-xs font-semibold ${nbActuel >= LIMITE_GRATUIT ? "text-red-700" : "text-yellow-700"}`}>
+                {activeTab === "pret" ? "Prêts" : "Dettes"} : {nbActuel} / {LIMITE_GRATUIT}
+                {nbActuel >= LIMITE_GRATUIT && " — Limite atteinte"}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/abonnement")}
+              className="flex-shrink-0 text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1.5 rounded-lg"
+            >
+              Passer Premium
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex bg-muted rounded-xl p-1">
@@ -366,19 +412,40 @@ export default function PretsPage() {
             <button key={tab} onClick={() => { setActiveTab(tab); setShowForm(false); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === tab ? "bg-white shadow text-primary" : "text-muted-foreground"}`}>
               {tab === "pret" ? <HandCoins className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
-              {tab === "pret" ? "Mes Prêts" : "Mes Dettes"}
+              {tab === "pret" ? `Mes Prêts (${nbPrets}/${isPremium ? "∞" : LIMITE_GRATUIT})` : `Mes Dettes (${nbDettes}/${isPremium ? "∞" : LIMITE_GRATUIT})`}
             </button>
           ))}
         </div>
 
+        {/* Mur limite atteinte */}
+        {limiteAtteinte && !showForm && (
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center mx-auto shadow-md">
+              <Crown className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <p className="font-black text-gray-800 text-lg">Limite du plan gratuit atteinte</p>
+              <p className="text-gray-500 text-sm mt-1">
+                Vous avez atteint les <span className="font-bold">{LIMITE_GRATUIT} {activeTab === "pret" ? "prêts" : "dettes"}</span> inclus dans le plan gratuit.
+              </p>
+              <p className="text-gray-400 text-xs mt-1">Passez au Premium pour enregistrer sans limite.</p>
+            </div>
+            <button
+              onClick={() => navigate("/abonnement")}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all"
+            >
+              <Crown className="w-4 h-4" /> Passer à Premium
+            </button>
+          </div>
+        )}
+
         {/* Formulaire */}
-        {showForm && (
+        {showForm && !limiteAtteinte && (
           <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm">
             <h2 className="font-bold text-lg text-foreground">
-              {activeTab === "pret" ? "➕ Nouveau prêt accordé" : "➕ Nouvelle dette"}
+              {activeTab === "pret" ? "Nouveau prêt accordé" : "Nouvelle dette"}
             </h2>
 
-            {/* Résumé prêteur/emprunteur */}
             <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm">
               <span className="font-bold text-primary">{preteurLabel}</span>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
@@ -494,7 +561,6 @@ export default function PretsPage() {
                             {STATUT_LABELS[pret.statut]}
                           </span>
                         </div>
-                        {/* Prêteur → Emprunteur */}
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                           <span className="text-primary font-medium">{preteurNom}</span>
                           <ArrowRight className="w-3 h-3" />
