@@ -35,6 +35,7 @@ import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
 
 // Immobilier
 import ImmobilierPage from "@/pages/ImmobilierPage";
+import ProfilVendeurPage from "@/pages/nexora/ProfilVendeurPage";
 
 // Abonnement
 import AbonnementPage from "@/pages/AbonnementPage";
@@ -62,6 +63,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+
           {/* ── AUTHENTICATION ── */}
           <Route path="/login" element={<NexoraLoginPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -79,7 +81,12 @@ const App = () => (
           <Route path="/liens" element={<ProtectedPage><LiensPage /></ProtectedPage>} />
           <Route path="/profil" element={<ProtectedPage><ProfilPage /></ProtectedPage>} />
           <Route path="/abonnement" element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
+
+          {/* ── IMMOBILIER (protégé) ── */}
           <Route path="/immobilier" element={<ProtectedPage><ImmobilierPage /></ProtectedPage>} />
+
+          {/* ── PROFIL VENDEUR & ANNONCE (public — sans AuthGuard) ── */}
+          <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
 
           {/* ── MÉDIAS (Admin seulement) ── */}
           <Route path="/medias" element={<AdminPage><MediasPage /></AdminPage>} />
@@ -96,6 +103,7 @@ const App = () => (
 
           {/* ── 404 ── */}
           <Route path="*" element={<NotFound />} />
+
         </Routes>
       </TooltipProvider>
     </BrowserRouter>
