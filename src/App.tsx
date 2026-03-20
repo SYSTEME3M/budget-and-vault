@@ -33,9 +33,9 @@ import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
 import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
 import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
 
-// Immobilier
+// Immobilier — ✅ les deux dans src/pages/ directement
 import ImmobilierPage from "@/pages/ImmobilierPage";
-import ProfilVendeurPage from "@/pages/nexora/ProfilVendeurPage";
+import ProfilVendeurPage from "@/pages/ProfilVendeurPage";
 
 // Abonnement
 import AbonnementPage from "@/pages/AbonnementPage";
@@ -85,7 +85,7 @@ const App = () => (
           {/* ── IMMOBILIER (protégé) ── */}
           <Route path="/immobilier" element={<ProtectedPage><ImmobilierPage /></ProtectedPage>} />
 
-          {/* ── PROFIL VENDEUR & ANNONCE (public — sans AuthGuard) ── */}
+          {/* ── PROFIL VENDEUR (public — sans AuthGuard) ── */}
           <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
 
           {/* ── MÉDIAS (Admin seulement) ── */}
@@ -111,3 +111,13 @@ const App = () => (
 );
 
 export default App;
+```
+
+---
+
+**Ce qu'il faut faire :**
+
+**1 seul changement** — déplacer le fichier sur GitHub :
+```
+❌ Avant : src/pages/nexora/ProfilVendeurPage.tsx
+✅ Après : src/pages/ProfilVendeurPage.tsx
