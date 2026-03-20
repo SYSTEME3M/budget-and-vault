@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { X, Upload, Plus, Loader2 } from "lucide-react";
-import { AnnonceFormData, TypeBien, Statut } from "../types";
-import { createAnnonce, updateAnnonce } from "../hooks/useAnnonces";
+import { AnnonceFormData, TypeBien, Statut } from "@/types";
+import { createAnnonce, updateAnnonce } from "@/hooks/useAnnonces";
 
 interface Props {
   initial?: Partial<AnnonceFormData> & { _id?: string; images?: string[] };

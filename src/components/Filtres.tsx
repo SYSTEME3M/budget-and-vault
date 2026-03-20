@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
-import { Filtres as FiltresType, TypeBien, Statut } from "../types";
+import { Filtres as FiltresType, TypeBien, Statut } from "@/types";
 
 interface Props {
   filtres: FiltresType;

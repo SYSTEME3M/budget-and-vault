@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      abonnements: {
+        Row: {
+          created_at: string
+          date_debut: string
+          date_fin: string | null
+          devise: string
+          id: string
+          mode_paiement: string | null
+          montant: number
+          plan: string
+          reference_paiement: string | null
+          statut: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_debut?: string
+          date_fin?: string | null
+          devise?: string
+          id?: string
+          mode_paiement?: string | null
+          montant?: number
+          plan?: string
+          reference_paiement?: string | null
+          statut?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_debut?: string
+          date_fin?: string | null
+          devise?: string
+          id?: string
+          mode_paiement?: string | null
+          montant?: number
+          plan?: string
+          reference_paiement?: string | null
+          statut?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abonnements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "nexora_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_users: {
         Row: {
           access_code_hash: string
@@ -343,6 +393,89 @@ export type Database = {
           taille_bytes?: number | null
           type_media?: string
           url?: string
+        }
+        Relationships: []
+      }
+      nexora_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          is_admin_session: boolean
+          session_token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_admin_session?: boolean
+          session_token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_admin_session?: boolean
+          session_token?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexora_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "nexora_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexora_users: {
+        Row: {
+          avatar_url: string | null
+          badge_premium: boolean
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          is_admin: boolean
+          nom_prenom: string
+          password_hash: string
+          plan: string
+          remember_token: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          badge_premium?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          is_admin?: boolean
+          nom_prenom: string
+          password_hash: string
+          plan?: string
+          remember_token?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          badge_premium?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          is_admin?: boolean
+          nom_prenom?: string
+          password_hash?: string
+          plan?: string
+          remember_token?: string | null
+          updated_at?: string
+          username?: string
         }
         Relationships: []
       }

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MapPin, Phone, MessageCircle, Eye } from "lucide-react";
-import { Annonce } from "../types";
-import { toggleFavori } from "../hooks/useAnnonces";
+import { Annonce } from "@/types";
+import { toggleFavori } from "@/hooks/useAnnonces";
 
 const TYPE_LABELS = {
   maison: { label: "Maison", emoji: "🏠", color: "bg-orange-100 text-orange-700" },
