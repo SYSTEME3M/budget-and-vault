@@ -51,7 +51,7 @@ import { useNavigate } from "react-router-dom";
 const queryClient = new QueryClient();
 
 // ── Durées loader
-const LOADER_LOGIN = 15000; // 15s — splash screen complet pour login/inscription
+const LOADER_LOGIN = 10000; // 10s — splash screen complet pour login/inscription
 const LOADER_PAGE  = 800;   // 0.8s — transition rapide pour les autres pages
 
 // ── Page protégée (authentification requise)
