@@ -151,7 +151,7 @@ export default function BoutiqueCommandesPage() {
             <p className="text-3xl font-black text-blue-700">{stats.nouvelles}</p>
           </div>
           <div className="bg-green-50 border border-green-100 rounded-2xl p-4">
-            <p className="text-xs text-green-600 font-medium">✅ Livrées</p>
+            <p className="text-xs text-green-600 font-medium">Livrées</p>
             <p className="text-3xl font-black text-green-700">{stats.livrees}</p>
           </div>
           <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4 col-span-2">
