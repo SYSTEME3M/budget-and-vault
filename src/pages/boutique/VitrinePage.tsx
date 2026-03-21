@@ -111,7 +111,7 @@ export default function VitrinePage() {
         .select("*")
         .eq("slug", slug)
         .eq("actif", true)
-        .single();
+        .maybeSingle();
 
       if (!b) { setNotFound(true); setLoading(false); return; }
       setBoutique(b as any);
