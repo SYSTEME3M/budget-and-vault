@@ -5,6 +5,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import {
   Plus, Link2, Phone, MessageSquare, ExternalLink, Trash2, Edit2
 } from "lucide-react";
@@ -47,7 +48,7 @@ export default function LiensPage() {
 
   const loadItems = async () => {
     setLoading(true);
-    const { data } = await supabase.from("liens_contacts").select("*").order("ordre").order("created_at", { ascending: false });
+    const { data } = await supabase.from("liens_contacts").select("*").eq("user_id", getNexoraUser()?.id).order("ordre").order("created_at", { ascending: false });
     setItems((data || []) as LienContact[]);
     setLoading(false);
   };
