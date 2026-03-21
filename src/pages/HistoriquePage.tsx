@@ -1,3 +1,4 @@
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatAmount, convertAmount, getWeekNumber, getMondayOfWeek } from "@/lib/app-utils";
@@ -43,8 +44,8 @@ export default function HistoriquePage() {
   const loadAll = async () => {
     setLoading(true);
     const [depRes, entRes] = await Promise.all([
-      supabase.from("depenses").select("*").order("date_depense", { ascending: false }).order("created_at", { ascending: false }),
-      supabase.from("entrees").select("*").order("date_entree", { ascending: false }).order("created_at", { ascending: false }),
+      supabase.from("depenses").select("*").eq("user_id", getNexoraUser()?.id).order("date_depense", { ascending: false }).order("created_at", { ascending: false }),
+      supabase.from("entrees").select("*").eq("user_id", getNexoraUser()?.id).order("date_entree", { ascending: false }).order("created_at", { ascending: false }),
     ]);
     setDepenses(depRes.data || []);
     setEntrees(entRes.data || []);
