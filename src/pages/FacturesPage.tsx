@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { hasNexoraPremium } from "@/lib/nexora-auth";
+import { hasNexoraPremium, getNexoraUser } from "@/lib/nexora-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, FileDown, Trash2, ChevronDown, ChevronUp, Receipt, History, Crown } from "lucide-react";
@@ -194,7 +194,9 @@ export default function FacturesPage() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("factures" as any).select("*, articles_facture(*)").order("created_at", { ascending: false });
+    const currentUser = getNexoraUser();
+    if (!currentUser?.id) { setLoading(false); return; }
+    const { data } = await supabase.from("factures" as any).select("*, articles_facture(*)").eq("user_id", currentUser.id).order("created_at", { ascending: false });
     if (data) setFactures((data as any[]).map(f => ({ ...f, articles: f.articles_facture || [] })));
     setLoading(false);
   };
@@ -232,8 +234,10 @@ export default function FacturesPage() {
       toast({ title: "Vérifiez les articles", variant: "destructive" }); return;
     }
     setSaving(true);
+    const currentUser = getNexoraUser();
     const numero = genNumero();
     const { data: newF, error } = await supabase.from("factures" as any).insert({
+      user_id: currentUser?.id,
       numero, date_facture: new Date().toISOString().split("T")[0], heure_facture: getHeureNow(),
       vendeur_nom: form.vendeur_nom, vendeur_ifu: form.vendeur_ifu || null,
       vendeur_adresse: form.vendeur_adresse, vendeur_pays: form.vendeur_pays,
