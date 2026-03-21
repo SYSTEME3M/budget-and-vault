@@ -5,6 +5,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import {
   Plus, Eye, EyeOff, Trash2, ExternalLink, Globe, User, Key, Lock, FileText, Edit2, Copy, Check
 } from "lucide-react";
