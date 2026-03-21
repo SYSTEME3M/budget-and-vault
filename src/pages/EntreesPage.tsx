@@ -5,6 +5,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { Plus, Trash2, Download, TrendingUp, Filter, AlertCircle, BarChart2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -54,7 +55,7 @@ export default function EntreesPage() {
 
   const loadEntrees = async () => {
     setLoading(true);
-    const { data } = await supabase.from("entrees").select("*").order("date_entree", { ascending: false }).order("created_at", { ascending: false });
+    const { data } = await supabase.from("entrees").select("*").eq("user_id", getNexoraUser()?.id).order("date_entree", { ascending: false }).order("created_at", { ascending: false });
     setEntrees(data || []);
     setLoading(false);
   };
@@ -86,6 +87,7 @@ export default function EntreesPage() {
     e.preventDefault();
     if (!form.titre || !form.montant) return;
     const { error } = await supabase.from("entrees").insert({
+      user_id: getNexoraUser()?.id,
       titre: form.titre, montant: parseFloat(form.montant), devise: form.devise,
       categorie: form.categorie, note: form.note || null, date_entree: form.date_entree,
     });
