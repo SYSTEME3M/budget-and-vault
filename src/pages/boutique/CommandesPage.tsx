@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import BoutiqueLayout from "@/components/BoutiqueLayout";
-import { hasNexoraPremium } from "@/lib/nexora-auth";
+import { hasNexoraPremium, getNexoraUser } from "@/lib/nexora-auth";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingBag, ChevronDown, ChevronUp, Phone,
@@ -92,8 +92,10 @@ export default function CommandesPage() {
 
   const load = async () => {
     setLoading(true);
+    const currentUser = getNexoraUser();
+    if (!currentUser?.id) { setLoading(false); return; }
     const { data: b } = await supabase
-      .from("boutiques" as any).select("*").limit(1).single();
+      .from("boutiques" as any).select("*").eq("user_id", currentUser.id).limit(1).maybeSingle();
     if (b) setBoutique(b);
 
     if (b) {
