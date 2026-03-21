@@ -3,6 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { TrendingUp, TrendingDown, Crown, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatAmount, convertAmount, playSuccessSound } from "@/lib/app-utils";
@@ -101,7 +102,8 @@ function EntreesContent() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("entrees").select("*").order("date_entree", { ascending: false });
+    const _u = getNexoraUser();
+    const { data } = await supabase.from("entrees").select("*").eq("user_id", _u?.id).order("date_entree", { ascending: false });
     setEntrees(data || []);
     setLoading(false);
   };
@@ -120,6 +122,7 @@ function EntreesContent() {
     if (!form.titre || !form.montant) { toast({ title: "Titre et montant requis", variant: "destructive" }); return; }
     setSaving(true);
     const { error } = await supabase.from("entrees").insert({
+      user_id: getNexoraUser()?.id,
       titre: form.titre, montant: parseFloat(form.montant), categorie: form.categorie,
       devise: form.devise, date_entree: form.date_entree, note: form.note || null
     });
@@ -265,7 +268,8 @@ function DepensesContent() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("depenses").select("*").order("date_depense", { ascending: false });
+    const _ud = getNexoraUser();
+    const { data } = await supabase.from("depenses").select("*").eq("user_id", _ud?.id).order("date_depense", { ascending: false });
     setDepenses(data || []);
     setLoading(false);
   };
@@ -284,6 +288,7 @@ function DepensesContent() {
     if (!form.titre || !form.montant) { toast({ title: "Titre et montant requis", variant: "destructive" }); return; }
     setSaving(true);
     const { error } = await supabase.from("depenses").insert({
+      user_id: getNexoraUser()?.id,
       titre: form.titre, montant: parseFloat(form.montant), categorie: form.categorie,
       devise: form.devise, date_depense: form.date_depense, note: form.note || null
     });
