@@ -57,12 +57,17 @@ export default function NexoraLoginPage() {
 
   useEffect(() => {
     initAdminUser();
-    const ready = setTimeout(() => setPageReady(true), 800);
+    
+    // ✅ CORRECTION : Vérifier d'abord si authentifié AVANT de démarrer le timer
     if (isNexoraAuthenticated()) {
       navigate("/dashboard", { replace: true });
+      return; // ← Arrêter l'exécution ici
     }
+
+    // Sinon, afficher le splash screen pendant 800ms
+    const ready = setTimeout(() => setPageReady(true), 800);
     return () => clearTimeout(ready);
-  }, []);
+  }, [navigate]);
 
   // ── Splash screen
   if (!pageReady) {
