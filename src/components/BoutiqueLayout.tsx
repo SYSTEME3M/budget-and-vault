@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, ShoppingBag, Settings,
   Eye, ChevronRight, Menu, X, ArrowLeft, Store,
 } from "lucide-react";
-
+f
 const boutiqueNav = [
   { path: "/boutique", icon: LayoutDashboard, label: "Dashboard", color: "text-blue-400", bg: "bg-blue-400/10" },
   { path: "/boutique/produits", icon: Package, label: "Produits", color: "text-purple-400", bg: "bg-purple-400/10" },
