@@ -83,7 +83,7 @@ export default function ProfilVendeurPage() {
         .eq("id", userId)
         .maybeSingle();
 
-      if (vendeurData) setVendeur(vendeurData as VendeurInfo);
+      if (vendeurData) setVendeur(vendeurData as unknown as VendeurInfo);
 
       // Charger annonces du vendeur
       const { data: annoncesData } = await supabase
