@@ -5,12 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NexoraAuthGuard from "@/components/NexoraAuthGuard";
 import PageLoader from "@/components/PageLoader";
-import { hasNexoraPremium } from "@/lib/nexora-auth";
 
-// Auth Pages
+// Auth
 import NexoraLoginPage from "@/pages/NexoraLoginPage";
 
-// Dashboard Pages
+// Pages Dashboard / Finance
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
 import EntreesPage from "@/pages/EntreesPage";
@@ -22,74 +21,38 @@ import ProfilPage from "@/pages/ProfilPage";
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
-import EntreesDepensesPage from "@/pages/EntreesDepensesPage";
-import ImmobilierPage from "@/pages/ImmobilierPage";
-import AbonnementPage from "@/pages/AbonnementPage";
-import AdminPanelPage from "@/pages/AdminPanelPage";
-import NotFound from "@/pages/NotFound";
 
-import AppLayout from "@/components/AppLayout";
-import { Crown } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+// Page Entrées-Dépenses combinée
+import EntreesDepensesPage from "@/pages/EntreesDepensesPage";
+
+// Boutique
+import BoutiqueAccueilPage from "@/pages/boutique/AccueilPage";
+import BoutiqueProduitsPage from "@/pages/boutique/ProduitsPage";
+import BoutiqueCommandesPage from "@/pages/boutique/CommandesPage";
+import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
+import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
+import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
+
+// Immobilier
+import ImmobilierPage from "@/pages/ImmobilierPage";
+import ProfilVendeurPage from "@/pages/nexora/ProfilVendeurPage";
+
+// Abonnement
+import AbonnementPage from "@/pages/AbonnementPage";
+
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const LOADER_LOGIN = 800;
-const LOADER_PAGE = 800;
-
-// ── Page protégée
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard>
-    <PageLoader duration={LOADER_PAGE}>{children}</PageLoader>
+    <PageLoader duration={1500}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
-// ── Page admin
 const AdminPage = ({ children }: { children: React.ReactNode }) => (
   <NexoraAuthGuard requireAdmin>
-    <PageLoader duration={LOADER_PAGE}>{children}</PageLoader>
-  </NexoraAuthGuard>
-);
-
-// ── Mur premium
-function PremiumWall() {
-  const navigate = useNavigate();
-  return (
-    <AppLayout>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center mb-6 shadow-lg">
-          <Crown className="w-10 h-10 text-white" />
-        </div>
-        <h2 className="text-2xl font-black text-gray-800 mb-2">Fonctionnalité Premium</h2>
-        <p className="text-gray-500 text-sm mb-1 max-w-xs">
-          Cette section est réservée aux membres <span className="font-bold text-yellow-600">Premium</span>.
-        </p>
-        <p className="text-gray-400 text-xs mb-8 max-w-xs">
-          Passez au plan Premium pour accéder à toutes les fonctionnalités sans limite.
-        </p>
-        <button
-          onClick={() => navigate("/abonnement")}
-          className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-all"
-        >
-          <Crown className="w-4 h-4" /> Voir les plans
-        </button>
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          Retour au tableau de bord
-        </button>
-      </div>
-    </AppLayout>
-  );
-}
-
-// ── Page 100% premium
-const PremiumPage = ({ children }: { children: React.ReactNode }) => (
-  <NexoraAuthGuard>
-    <PageLoader duration={LOADER_PAGE}>
-      {hasNexoraPremium() ? children : <PremiumWall />}
-    </PageLoader>
+    <PageLoader duration={1500}>{children}</PageLoader>
   </NexoraAuthGuard>
 );
 
@@ -100,40 +63,47 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+
           {/* ── AUTHENTICATION ── */}
-          <Route 
-            path="/login" 
-            element={
-              <PageLoader duration={LOADER_LOGIN}>
-                <NexoraLoginPage />
-              </PageLoader>
-            } 
-          />
+          <Route path="/login" element={<NexoraLoginPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* ── PROTECTED ROUTES ── */}
+          {/* ── DASHBOARD & FINANCE (protégé) ── */}
           <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
+          <Route path="/entrees-depenses" element={<ProtectedPage><EntreesDepensesPage /></ProtectedPage>} />
+          <Route path="/entrees" element={<Navigate to="/entrees-depenses" replace />} />
+          <Route path="/depenses" element={<Navigate to="/entrees-depenses" replace />} />
           <Route path="/historique" element={<ProtectedPage><HistoriquePage /></ProtectedPage>} />
+          <Route path="/prets" element={<ProtectedPage><PretsPage /></ProtectedPage>} />
+          <Route path="/investissements" element={<ProtectedPage><InvestissementsPage /></ProtectedPage>} />
+          <Route path="/factures" element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
           <Route path="/coffre-fort" element={<ProtectedPage><CoffreFortPage /></ProtectedPage>} />
           <Route path="/liens" element={<ProtectedPage><LiensPage /></ProtectedPage>} />
           <Route path="/profil" element={<ProtectedPage><ProfilPage /></ProtectedPage>} />
           <Route path="/abonnement" element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
-          <Route path="/factures" element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
-          <Route path="/prets" element={<ProtectedPage><PretsPage /></ProtectedPage>} />
-          <Route path="/entrees-depenses" element={<ProtectedPage><EntreesDepensesPage /></ProtectedPage>} />
-          <Route path="/entrees" element={<Navigate to="/entrees-depenses" replace />} />
-          <Route path="/depenses" element={<Navigate to="/entrees-depenses" replace />} />
-          <Route path="/investissements" element={<ProtectedPage><InvestissementsPage /></ProtectedPage>} />
 
-          {/* ── PREMIUM ROUTES ── */}
-          <Route path="/immobilier" element={<PremiumPage><ImmobilierPage /></PremiumPage>} />
+          {/* ── IMMOBILIER (protégé) ── */}
+          <Route path="/immobilier" element={<ProtectedPage><ImmobilierPage /></ProtectedPage>} />
 
-          {/* ── ADMIN ── */}
-          <Route path="/admin" element={<AdminPage><AdminPanelPage /></AdminPage>} />
+          {/* ── PROFIL VENDEUR & ANNONCE (public — sans AuthGuard) ── */}
+          <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
+
+          {/* ── MÉDIAS (Admin seulement) ── */}
           <Route path="/medias" element={<AdminPage><MediasPage /></AdminPage>} />
+
+          {/* ── BOUTIQUE (protégé) ── */}
+          <Route path="/boutique" element={<ProtectedPage><BoutiqueAccueilPage /></ProtectedPage>} />
+          <Route path="/boutique/produits" element={<ProtectedPage><BoutiqueProduitsPage /></ProtectedPage>} />
+          <Route path="/boutique/commandes" element={<ProtectedPage><BoutiqueCommandesPage /></ProtectedPage>} />
+          <Route path="/boutique/parametres" element={<ProtectedPage><BoutiqueParametresPage /></ProtectedPage>} />
+
+          {/* ── VITRINE PUBLIQUE ── */}
+          <Route path="/shop/:slug" element={<BoutiqueVitrinePage />} />
+          <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
           {/* ── 404 ── */}
           <Route path="*" element={<NotFound />} />
+
         </Routes>
       </TooltipProvider>
     </BrowserRouter>
