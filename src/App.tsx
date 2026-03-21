@@ -3,13 +3,9 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NexoraAuthGuard from "@/components/NexoraAuthGuard";
-import PageLoader from "@/components/PageLoader";
-
-// Auth
-import NexoraLoginPage from "@/pages/NexoraLoginPage";
-
-// Pages Dashboard / Finance
+import AuthGuard from "@/components/AuthGuard";
+// Pages principales
+import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
 import EntreesPage from "@/pages/EntreesPage";
@@ -18,43 +14,21 @@ import CoffreFortPage from "@/pages/CoffreFortPage";
 import MediasPage from "@/pages/MediasPage";
 import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
+import AdminPage from "@/pages/AdminPage";
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
-
-// Page Entrées-Dépenses combinée
-import EntreesDepensesPage from "@/pages/EntreesDepensesPage";
-
-// Boutique
+// Boutique - Nouvelles pages (dossier boutique/)
 import BoutiqueAccueilPage from "@/pages/boutique/AccueilPage";
 import BoutiqueProduitsPage from "@/pages/boutique/ProduitsPage";
+import ProduitsDigitauxPage from "@/pages/boutique/ProduitsDigitaux";
 import BoutiqueCommandesPage from "@/pages/boutique/CommandesPage";
 import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
 import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
 import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
-
-// Immobilier
-import ImmobilierPage from "@/pages/ImmobilierPage";
-import ProfilVendeurPage from "@/pages/nexora/ProfilVendeurPage";
-
-// Abonnement
-import AbonnementPage from "@/pages/AbonnementPage";
-
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
-
-const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
-  <NexoraAuthGuard>
-    <PageLoader duration={1500}>{children}</PageLoader>
-  </NexoraAuthGuard>
-);
-
-const AdminPage = ({ children }: { children: React.ReactNode }) => (
-  <NexoraAuthGuard requireAdmin>
-    <PageLoader duration={1500}>{children}</PageLoader>
-  </NexoraAuthGuard>
-);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -63,47 +37,38 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          {/* ── Auth ── */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/admin" element={<LoginPage />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* ── AUTHENTICATION ── */}
-          <Route path="/login" element={<NexoraLoginPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* ── App principale ── */}
+          <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+          <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
+          <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
+          <Route path="/historique" element={<AuthGuard><HistoriquePage /></AuthGuard>} />
+          <Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
+          <Route path="/investissements" element={<AuthGuard><InvestissementsPage /></AuthGuard>} />
+          <Route path="/factures" element={<AuthGuard><FacturesPage /></AuthGuard>} />
+          <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
+          <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
+          <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
+          <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
+          <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          {/* ── DASHBOARD & FINANCE (protégé) ── */}
-          <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
-          <Route path="/entrees-depenses" element={<ProtectedPage><EntreesDepensesPage /></ProtectedPage>} />
-          <Route path="/entrees" element={<Navigate to="/entrees-depenses" replace />} />
-          <Route path="/depenses" element={<Navigate to="/entrees-depenses" replace />} />
-          <Route path="/historique" element={<ProtectedPage><HistoriquePage /></ProtectedPage>} />
-          <Route path="/prets" element={<ProtectedPage><PretsPage /></ProtectedPage>} />
-          <Route path="/investissements" element={<ProtectedPage><InvestissementsPage /></ProtectedPage>} />
-          <Route path="/factures" element={<ProtectedPage><FacturesPage /></ProtectedPage>} />
-          <Route path="/coffre-fort" element={<ProtectedPage><CoffreFortPage /></ProtectedPage>} />
-          <Route path="/liens" element={<ProtectedPage><LiensPage /></ProtectedPage>} />
-          <Route path="/profil" element={<ProtectedPage><ProfilPage /></ProtectedPage>} />
-          <Route path="/abonnement" element={<ProtectedPage><AbonnementPage /></ProtectedPage>} />
+          {/* ── Boutique Admin ── */}
+          <Route path="/boutique" element={<AuthGuard><BoutiqueAccueilPage /></AuthGuard>} />
+          <Route path="/boutique/produits" element={<AuthGuard><BoutiqueProduitsPage /></AuthGuard>} />
+          <Route path="/boutique/produits-digitaux" element={<AuthGuard><ProduitsDigitauxPage /></AuthGuard>} />
+          <Route path="/boutique/commandes" element={<AuthGuard><BoutiqueCommandesPage /></AuthGuard>} />
+          <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
 
-          {/* ── IMMOBILIER (protégé) ── */}
-          <Route path="/immobilier" element={<ProtectedPage><ImmobilierPage /></ProtectedPage>} />
-
-          {/* ── PROFIL VENDEUR & ANNONCE (public — sans AuthGuard) ── */}
-          <Route path="/immobilier/vendeur/:userId" element={<ProfilVendeurPage />} />
-
-          {/* ── MÉDIAS (Admin seulement) ── */}
-          <Route path="/medias" element={<AdminPage><MediasPage /></AdminPage>} />
-
-          {/* ── BOUTIQUE (protégé) ── */}
-          <Route path="/boutique" element={<ProtectedPage><BoutiqueAccueilPage /></ProtectedPage>} />
-          <Route path="/boutique/produits" element={<ProtectedPage><BoutiqueProduitsPage /></ProtectedPage>} />
-          <Route path="/boutique/commandes" element={<ProtectedPage><BoutiqueCommandesPage /></ProtectedPage>} />
-          <Route path="/boutique/parametres" element={<ProtectedPage><BoutiqueParametresPage /></ProtectedPage>} />
-
-          {/* ── VITRINE PUBLIQUE ── */}
+          {/* ── Vitrine publique (sans AuthGuard) ── */}
           <Route path="/shop/:slug" element={<BoutiqueVitrinePage />} />
           <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
           {/* ── 404 ── */}
           <Route path="*" element={<NotFound />} />
-
         </Routes>
       </TooltipProvider>
     </BrowserRouter>
