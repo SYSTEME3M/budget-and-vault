@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { getNexoraUser, isNexoraAdmin, hasNexoraPremium } from "@/lib/nexora-auth";
