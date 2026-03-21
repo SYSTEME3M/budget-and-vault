@@ -35,8 +35,8 @@ const isFavori = favoris.includes(userId);
 const type = TYPE_LABELS[annonce.type];
 const statut = STATUT_LABELS[annonce.statut];
 const photo = annonce.images?.[0]
-? http://localhost:5000${annonce.images[0]}
-: null;
+  ? `http://localhost:5000${annonce.images[0]}`
+  : null;
 
 const handleFavori = async (e: React.MouseEvent) => {
 e.preventDefault();
