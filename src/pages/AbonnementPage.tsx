@@ -1,299 +1,274 @@
-"use client";
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
-import { getNexoraUser, isNexoraAdmin, hasNexoraPremium } from "@/lib/nexora-auth";
-import { BadgeCheck, Zap, Crown, CheckCircle2, Star, CreditCard, Smartphone, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { getNexoraUser, isNexoraAdmin, hasNexoraPremium, hasNexoraBoss, hasNexoraRoi, getPlanLabel } from "@/lib/nexora-auth";
+import { BadgeCheck, Zap, Crown, CheckCircle2, X, CreditCard, Smartphone, Star, Shield } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 declare global {
-  interface Window {
-    openKkiapayWidget: (options: Record<string, unknown>) => void;
-  }
+  interface Window { openKkiapayWidget: (o: Record<string, unknown>) => void; }
 }
 
 const KKIAPAY_KEY = "f19f84bbf2bbe4249947974bc0929691d3afd5ae";
 
-export default function AbonnementPage() {
-  const user = getNexoraUser();
-  const isAdmin = isNexoraAdmin();
-  const isPremium = hasNexoraPremium();
-  const [kkiapayReady, setKkiapayReady] = useState(false);
+const PLANS = [
+  {
+    id: "gratuit", label: "Gratuit", price: 0, priceLabel: "0$",
+    color: "#6b7280", gradient: "from-gray-500 to-gray-600",
+    icon: Shield,
+    features: [
+      { label: "5 factures maximum",        ok: true  },
+      { label: "5 prêts/dettes maximum",    ok: true  },
+      { label: "2 épargnes maximum",        ok: true  },
+      { label: "Coffre-fort (10 comptes)",  ok: true  },
+      { label: "Liens & Contacts",          ok: true  },
+      { label: "Tableau de bord",           ok: true  },
+      { label: "Boutique",                  ok: false },
+      { label: "Marché Immobilier",         ok: false },
+      { label: "Badge premium",             ok: false },
+    ],
+  },
+  {
+    id: "boss", label: "BOSS", price: 10, priceLabel: "10$",
+    color: "#f59e0b", gradient: "from-yellow-500 to-orange-500",
+    badge: "Populaire",
+    icon: Star,
+    features: [
+      { label: "50 factures par mois",         ok: true  },
+      { label: "20 prêts/dettes",              ok: true  },
+      { label: "10 épargnes",                  ok: true  },
+      { label: "Coffre-fort (100 comptes)",    ok: true  },
+      { label: "Boutique (20 produits min)",   ok: true  },
+      { label: "Entrées & Dépenses",           ok: true  },
+      { label: "Badge BOSS",                   ok: true  },
+      { label: "Marché Immobilier",            ok: false },
+      { label: "Produits illimités",           ok: false },
+    ],
+  },
+  {
+    id: "roi", label: "ROI", price: 20, priceLabel: "20$",
+    color: "#8b5cf6", gradient: "from-violet-600 to-purple-700",
+    badge: "Tout illimité",
+    icon: Crown,
+    features: [
+      { label: "Factures illimitées",       ok: true },
+      { label: "Prêts/dettes illimités",    ok: true },
+      { label: "Épargnes illimitées",       ok: true },
+      { label: "Coffre-fort illimité",      ok: true },
+      { label: "Boutique illimitée",        ok: true },
+      { label: "Marché Immobilier",         ok: true },
+      { label: "Entrées & Dépenses",        ok: true },
+      { label: "Badge ROI premium",         ok: true },
+      { label: "Support prioritaire",       ok: true },
+    ],
+  },
+];
 
-  // Charger le SDK KKiaPay
+export default function AbonnementPage() {
+  const user      = getNexoraUser();
+  const isAdmin   = isNexoraAdmin();
+  const isBoss    = hasNexoraBoss && hasNexoraBoss();
+  const isRoi     = hasNexoraRoi && hasNexoraRoi();
+  const { toast } = useToast();
+  const [kkiapayReady, setKkiapayReady] = useState(false);
+  const [subscribing, setSubscribing]   = useState<string | null>(null);
+
   useEffect(() => {
-    if (document.getElementById("kkiapay-sdk")) {
-      setKkiapayReady(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = "kkiapay-sdk";
-    script.src = "https://cdn.kkiapay.me/k.js";
-    script.async = true;
-    script.onload = () => setKkiapayReady(true);
-    script.onerror = () => console.error("Échec du chargement KKiaPay SDK");
-    document.body.appendChild(script);
+    if (document.getElementById("kkiapay-sdk")) { setKkiapayReady(true); return; }
+    const s = document.createElement("script");
+    s.id = "kkiapay-sdk";
+    s.src = "https://cdn.kkiapay.me/k.js";
+    s.async = true;
+    s.onload = () => setKkiapayReady(true);
+    document.body.appendChild(s);
   }, []);
 
-  // Détecter retour après paiement
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment") === "success") {
       window.history.replaceState({}, "", "/abonnement");
-      window.location.reload();
+      toast({ title: "Paiement reçu !", description: "Votre abonnement sera activé sous peu." });
     }
   }, []);
 
-  const handleSubscribe = () => {
-    if (!user?.id) {
-      alert("Vous devez être connecté pour vous abonner.");
-      return;
-    }
+  const handleSubscribe = (planId: string, price: number) => {
+    if (!user?.id) { toast({ title: "Connectez-vous d'abord", variant: "destructive" }); return; }
     if (!kkiapayReady || !window.openKkiapayWidget) {
-      alert("Paiement en cours de chargement, réessayez dans 2 secondes.");
-      return;
+      toast({ title: "Paiement en chargement...", description: "Réessayez dans 2 secondes." }); return;
     }
+    setSubscribing(planId);
     window.openKkiapayWidget({
-      amount: 6500,
+      amount: price * 620,
       key: KKIAPAY_KEY,
       sandbox: false,
       email: user.email ?? "",
-      data: JSON.stringify({ userId: user.id }),
+      data: JSON.stringify({ userId: user.id, plan: planId }),
       callback: `${window.location.origin}/abonnement?payment=success`,
-      theme: "#7c3aed",
+      theme: planId === "boss" ? "#f59e0b" : "#8b5cf6",
     });
+    setTimeout(() => setSubscribing(null), 3000);
+  };
+
+  const currentPlan = isAdmin ? "admin" : (user?.plan ?? "gratuit");
+
+  const isCurrentPlan = (planId: string) => {
+    if (isAdmin) return planId === "roi";
+    if (planId === "boss") return currentPlan === "boss";
+    if (planId === "roi")  return currentPlan === "roi";
+    return currentPlan === "gratuit";
   };
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6 pb-10">
+      <div className="max-w-4xl mx-auto space-y-6 pb-10">
 
-        {/* ── En-tête ── */}
+        {/* En-tête */}
         <div className="text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <Star className="w-8 h-8 text-white" />
+            <Crown className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-black text-gray-900">Plans & Abonnements</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Choisissez le plan qui correspond à vos besoins
+          <h1 className="text-2xl font-black text-foreground">Plans & Abonnements</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            1$ = 620 FCFA · Paiement sécurisé via KKiaPay
           </p>
         </div>
 
-        {/* ── Bannière Admin ── */}
+        {/* Bannière Admin */}
         {isAdmin && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
             <Crown className="w-6 h-6 text-amber-600 flex-shrink-0" />
             <div>
-              <div className="font-bold text-amber-700 flex items-center gap-2">
-                Accès Administrateur
-                <span className="inline-flex items-center gap-1 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                  <BadgeCheck className="w-3 h-3" /> Admin
-                </span>
-              </div>
-              <div className="text-sm text-amber-600">
-                Toutes les fonctionnalités sont gratuites et illimitées pour vous.
-              </div>
+              <div className="font-bold text-amber-700">Accès Administrateur — Tout illimité</div>
+              <div className="text-sm text-amber-600">Toutes les fonctionnalités sont gratuites et permanentes.</div>
             </div>
           </div>
         )}
 
-        {/* ── Bannière Premium actif ── */}
-        {isPremium && !isAdmin && (
+        {/* Bannière plan actif */}
+        {!isAdmin && currentPlan !== "gratuit" && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
             <BadgeCheck className="w-6 h-6 text-green-600 flex-shrink-0" />
             <div>
-              <div className="font-bold text-green-700 flex items-center gap-2">
-                Vous êtes Premium
-                <span className="inline-flex items-center gap-1 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                  <BadgeCheck className="w-3 h-3" /> Premium
-                </span>
+              <div className="font-bold text-green-700">
+                Plan {currentPlan === "boss" ? "BOSS" : "ROI"} actif ✓
               </div>
-              <div className="text-sm text-green-600">
-                Vous bénéficiez de toutes les fonctionnalités illimitées.
-              </div>
+              <div className="text-sm text-green-600">Vous bénéficiez de tous les avantages de votre plan.</div>
             </div>
           </div>
         )}
 
-        {/* ── Plan Gratuit ── */}
-        <div className={`bg-white border-2 rounded-2xl p-6 transition-all shadow-sm ${
-          !isPremium && !isAdmin ? "border-violet-500 shadow-violet-100" : "border-gray-200"
-        }`}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-black text-lg flex items-center gap-2 text-gray-900">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                Plan Gratuit
-              </h2>
-              <p className="text-gray-500 text-sm font-semibold">0$ / mois</p>
-            </div>
-            {!isPremium && !isAdmin && (
-              <span className="bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                Votre plan actuel
-              </span>
-            )}
-          </div>
+        {/* Grille des plans */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {PLANS.map(plan => {
+            const active = isCurrentPlan(plan.id);
+            const Icon   = plan.icon;
+            return (
+              <div key={plan.id}
+                className={`relative rounded-2xl border-2 overflow-hidden transition-all duration-200 bg-card ${
+                  active ? "shadow-xl scale-[1.02]" : "border-border shadow-sm hover:shadow-md"
+                }`}
+                style={{ borderColor: active ? plan.color : undefined }}>
 
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Inclus</p>
-          <ul className="space-y-2.5 text-sm mb-5">
-            {[
-              { label: "Factures",         desc: "5 factures maximum",             badge: "5 max",    badgeColor: "bg-orange-100 text-orange-700" },
-              { label: "Coffre-fort",      desc: "10 comptes maximum",             badge: "10 max",   badgeColor: "bg-orange-100 text-orange-700" },
-              { label: "Liens & Contacts", desc: "Sans limite",                    badge: "Illimité", badgeColor: "bg-green-100 text-green-700" },
-              { label: "Tableau de bord",  desc: "Vue d'ensemble de vos finances", badge: null,       badgeColor: "" },
-              { label: "Historique",       desc: "Consulter l'historique",         badge: null,       badgeColor: "" },
-            ].map((f) => (
-              <li key={f.label} className="flex items-start gap-2 text-gray-600">
-                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <span className="font-medium text-gray-700">{f.label}</span>
-                    <span className="text-gray-400"> — {f.desc}</span>
-                  </div>
-                  {f.badge && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${f.badgeColor}`}>
-                      {f.badge}
+                {/* Badge */}
+                {"badge" in plan && plan.badge && (
+                  <div className="absolute top-3 right-3">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full text-white"
+                      style={{ background: plan.color }}>
+                      {plan.badge}
                     </span>
+                  </div>
+                )}
+
+                <div className="p-5">
+                  {/* Icône */}
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${plan.gradient} flex items-center justify-center mb-3 shadow-md`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+
+                  {/* Titre & prix */}
+                  <div className="font-black text-xl" style={{ color: active ? plan.color : undefined }}>
+                    {plan.label}
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-3xl font-black text-foreground">{plan.priceLabel}</span>
+                    <span className="text-sm text-muted-foreground">/mois</span>
+                  </div>
+                  {plan.price > 0 && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      = {(plan.price * 620).toLocaleString("fr-FR")} FCFA/mois
+                    </div>
                   )}
-                </div>
-              </li>
-            ))}
-          </ul>
 
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Non inclus</p>
-          <ul className="space-y-2 text-sm">
-            {[
-              "Boutique (Premium uniquement)",
-              "Entrées & Dépenses",
-              "Investissements",
-              "Prêts & Dettes",
-              "Médias",
-              "Marché Immobilier",
-              "Badge Premium",
-            ].map((f) => (
-              <li key={f} className="flex items-center gap-2 text-gray-400">
-                <X className="w-4 h-4 text-red-400 flex-shrink-0" />
-                <span className="line-through">{f}</span>
-              </li>
-            ))}
-          </ul>
+                  {/* Features */}
+                  <ul className="mt-4 space-y-2">
+                    {plan.features.map(f => (
+                      <li key={f.label} className="flex items-center gap-2 text-xs">
+                        {f.ok
+                          ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: plan.color }} />
+                          : <X className="w-3.5 h-3.5 text-muted-foreground/40 flex-shrink-0" />}
+                        <span className={f.ok ? "text-foreground" : "text-muted-foreground/40 line-through"}>
+                          {f.label}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Bouton */}
+                  <div className="mt-5">
+                    {active || (isAdmin && plan.id === "roi") ? (
+                      <div className="w-full py-2.5 rounded-xl text-center text-sm font-bold"
+                        style={{ background: `${plan.color}20`, color: plan.color }}>
+                        {isAdmin ? "Gratuit Admin ✓" : "Plan actuel ✓"}
+                      </div>
+                    ) : plan.id === "gratuit" ? (
+                      <div className="w-full py-2.5 rounded-xl text-center text-sm text-muted-foreground bg-muted">
+                        Plan de base
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleSubscribe(plan.id, plan.price)}
+                        disabled={!kkiapayReady || subscribing === plan.id}
+                        className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60 hover:opacity-90"
+                        style={{
+                          background: `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)`,
+                          boxShadow: `0 4px 15px ${plan.color}40`,
+                        }}>
+                        {subscribing === plan.id
+                          ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : <><Zap className="w-4 h-4" /> S'abonner — {plan.priceLabel}/mois</>
+                        }
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* ── Plan Premium ── */}
-        <div className={`border-2 rounded-2xl p-6 relative overflow-hidden transition-all ${
-          isPremium && !isAdmin
-            ? "border-violet-500 bg-gradient-to-br from-violet-50 to-indigo-50 shadow-lg shadow-violet-100"
-            : "border-violet-200 bg-gradient-to-br from-violet-50/50 to-indigo-50/50"
-        }`}>
-          <div className="absolute -top-6 -right-6 w-28 h-28 bg-violet-200/30 rounded-full" />
-          <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-indigo-200/30 rounded-full" />
-
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
+        {/* Moyens de paiement */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <h3 className="font-bold text-sm mb-3 text-foreground">Moyens de paiement acceptés</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+              <Smartphone className="w-5 h-5 text-green-600 flex-shrink-0" />
               <div>
-                <h2 className="font-black text-lg flex items-center gap-2 text-gray-900">
-                  <Star className="w-5 h-5 text-violet-600 fill-violet-600" />
-                  Plan Premium
-                </h2>
-                <p className="text-gray-900 font-black text-2xl mt-0.5">
-                  10$
-                  <span className="text-sm font-normal text-gray-500"> / mois</span>
-                </p>
+                <p className="text-sm font-bold text-foreground">Mobile Money</p>
+                <p className="text-xs text-muted-foreground">MTN, Moov, Wave, Orange</p>
               </div>
-              {isPremium && !isAdmin && (
-                <span className="bg-violet-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  Votre plan actuel
-                </span>
-              )}
-              {isAdmin && (
-                <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                  <Crown className="w-3 h-3" /> Gratuit Admin
-                </span>
-              )}
             </div>
-
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-              Tout inclus — Illimité
-            </p>
-
-            <ul className="space-y-2.5 text-sm mb-6">
-              {[
-                { label: "Factures illimitées",           desc: "Aucune limite" },
-                { label: "Coffre-fort illimité",          desc: "Aucune limite de comptes" },
-                { label: "Liens & Contacts illimités",    desc: "Sans limite" },
-                { label: "Boutique complète",             desc: "Créer et gérer votre boutique" },
-                { label: "Entrées & Dépenses illimitées", desc: "Suivi financier complet" },
-                { label: "Investissements illimités",     desc: "Gérer tous vos investissements" },
-                { label: "Prêts & Dettes illimités",      desc: "Suivre tous vos prêts" },
-                { label: "Médias illimités",              desc: "Stocker tous vos fichiers" },
-                { label: "Marché Immobilier",             desc: "Publier des annonces immobilières" },
-                { label: "Badge Premium sur le profil",   desc: "Badge vert visible partout" },
-              ].map((f) => (
-                <li key={f.label} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-violet-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-medium text-gray-800">{f.label}</span>
-                    <span className="text-gray-500"> — {f.desc}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            {/* ── Bouton abonnement ── */}
-            {!isPremium && !isAdmin && (
-              <div className="space-y-3">
-                <button
-                  onClick={handleSubscribe}
-                  disabled={!kkiapayReady}
-                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Zap className="w-4 h-4" />
-                  {kkiapayReady ? "S'abonner — 10$ / mois" : "Chargement..."}
-                </button>
-
-                <div className="bg-white/70 rounded-xl p-3 border border-violet-100">
-                  <p className="text-xs font-semibold text-gray-600 mb-2 text-center">
-                    Moyens de paiement disponibles
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-100">
-                      <Smartphone className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold text-gray-700">Mobile Money</p>
-                        <p className="text-xs text-gray-400">MTN, Wave, Orange...</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-100">
-                      <CreditCard className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold text-gray-700">Carte Bancaire</p>
-                        <p className="text-xs text-gray-400">Visa, Mastercard...</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+              <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-foreground">Carte bancaire</p>
+                <p className="text-xs text-muted-foreground">Visa, Mastercard</p>
               </div>
-            )}
-
-            {/* ── Abonnement actif ── */}
-            {isPremium && !isAdmin && (
-              <div className="bg-white/70 rounded-xl p-3 border border-green-200 text-center">
-                <p className="text-sm font-bold text-green-700 flex items-center justify-center gap-2">
-                  <BadgeCheck className="w-4 h-4" />
-                  Abonnement actif — Merci pour votre confiance !
-                </p>
-              </div>
-            )}
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-3 text-center">
+            Paiement 100% sécurisé · 1$ = 620 FCFA · Support : erickpakpo786@gmail.com
+          </p>
         </div>
-
-        {/* ── Note admin ── */}
-        {isAdmin && (
-          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-center gap-3">
-            <Crown className="w-5 h-5 text-amber-500 flex-shrink-0" />
-            <p className="text-sm text-amber-700">
-              En tant qu'administrateur, vous avez accès à toutes les fonctionnalités
-              gratuitement et de façon permanente.
-            </p>
-          </div>
-        )}
 
       </div>
     </AppLayout>
