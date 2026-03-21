@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BoutiqueLayout from "@/components/BoutiqueLayout";
-import { hasNexoraPremium } from "@/lib/nexora-auth";
+import { hasNexoraPremium, getNexoraUser } from "@/lib/nexora-auth";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Package,
@@ -174,7 +174,9 @@ export default function ProduitsPage() {
 
   const load = async () => {
     setLoading(true);
-    const { data: b } = await supabase.from("boutiques" as any).select("*").limit(1).single();
+    const currentUser = getNexoraUser();
+    if (!currentUser?.id) { setLoading(false); return; }
+    const { data: b } = await supabase.from("boutiques" as any).select("*").eq("user_id", currentUser.id).limit(1).maybeSingle();
     if (b) {
       setBoutique(b);
       const { data: phys } = await supabase
@@ -306,8 +308,9 @@ export default function ProduitsPage() {
     if (!boutique) { toast({ title: "Configurez d'abord votre boutique", variant: "destructive" }); return; }
     if (!formP.nom || !formP.prix) { toast({ title: "Nom et prix obligatoires", variant: "destructive" }); return; }
     setSaving(true);
+    const currentUser = getNexoraUser();
     const payload = {
-      boutique_id: boutique.id, type: "physique",
+      boutique_id: boutique.id, user_id: currentUser?.id, type: "physique",
       nom: formP.nom, description: formP.description || null,
       prix: parseFloat(formP.prix), prix_promo: formP.prix_promo ? parseFloat(formP.prix_promo) : null,
       categorie: formP.categorie || null, tags: formP.tags,
@@ -345,8 +348,9 @@ export default function ProduitsPage() {
     if (!boutique) { toast({ title: "Configurez d'abord votre boutique", variant: "destructive" }); return; }
     if (!formD.nom || !formD.prix) { toast({ title: "Nom et prix obligatoires", variant: "destructive" }); return; }
     setSaving(true);
+    const currentUserD = getNexoraUser();
     const payload = {
-      boutique_id: boutique.id, type: "numerique",
+      boutique_id: boutique.id, user_id: currentUserD?.id, type: "numerique",
       type_digital: formD.type_digital, mode_tarification: formD.mode_tarification,
       nom: formD.nom, description: formD.description || null,
       prix: parseFloat(formD.prix), prix_promo: formD.prix_promo ? parseFloat(formD.prix_promo) : null,
