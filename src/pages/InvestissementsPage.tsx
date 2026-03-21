@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { formatAmount, convertAmount, playSuccessSound } from "@/lib/app-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,7 @@ export default function InvestissementsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: inv }, { data: vers }] = await Promise.all([
-      supabase.from("investissements" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("investissements" as any).select("*").eq("user_id", getNexoraUser()?.id).order("created_at", { ascending: false }),
       supabase.from("versements_investissement" as any).select("*").order("date_versement", { ascending: false }),
     ]);
     setInvestissements((inv as unknown as Investissement[]) || []);
@@ -87,6 +88,7 @@ export default function InvestissementsPage() {
       return;
     }
     const { error } = await supabase.from("investissements" as any).insert({
+        user_id: getNexoraUser()?.id,
       nom: form.nom,
       description: form.description || null,
       montant_objectif: parseFloat(form.montant_objectif),
