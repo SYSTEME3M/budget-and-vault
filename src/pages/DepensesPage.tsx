@@ -5,6 +5,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { Plus, Trash2, Download, TrendingDown, Filter, AlertCircle, BarChart2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -55,7 +56,7 @@ export default function DepensesPage() {
 
   const loadDepenses = async () => {
     setLoading(true);
-    const { data } = await supabase.from("depenses").select("*").order("date_depense", { ascending: false }).order("created_at", { ascending: false });
+    const { data } = await supabase.from("depenses").select("*").eq("user_id", getNexoraUser()?.id).order("date_depense", { ascending: false }).order("created_at", { ascending: false });
     setDepenses(data || []);
     setLoading(false);
   };
@@ -87,6 +88,7 @@ export default function DepensesPage() {
     e.preventDefault();
     if (!form.titre || !form.montant) return;
     const { error } = await supabase.from("depenses").insert({
+      user_id: getNexoraUser()?.id,
       titre: form.titre, montant: parseFloat(form.montant), devise: form.devise,
       categorie: form.categorie, note: form.note || null, date_depense: form.date_depense,
     });
