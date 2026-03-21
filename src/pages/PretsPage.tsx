@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getNexoraUser } from "@/lib/nexora-auth";
 import { formatAmount } from "@/lib/app-utils";
 import { hasNexoraPremium } from "@/lib/nexora-auth";
 import { Button } from "@/components/ui/button";
@@ -265,7 +266,7 @@ export default function PretsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: r }] = await Promise.all([
-      supabase.from("prets" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("prets" as any).select("*").eq("user_id", getNexoraUser()?.id).order("created_at", { ascending: false }),
       supabase.from("remboursements" as any).select("*").order("date_remboursement", { ascending: false }),
     ]);
     setPrets((p as unknown as Pret[]) || []);
@@ -300,6 +301,7 @@ export default function PretsPage() {
     }
 
     const { error } = await supabase.from("prets" as any).insert({
+        user_id: getNexoraUser()?.id,
       type: activeTab,
       nom_personne: form.nom_personne,
       montant: parseFloat(form.montant),
