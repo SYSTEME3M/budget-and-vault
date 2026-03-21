@@ -88,17 +88,19 @@ export default function DashboardPage() {
 
   const loadStats = async () => {
     setLoading(true);
+    const userId = nexoraUser?.id;
+    if (!userId) { setLoading(false); return; }
     const toXOF = (m: number, dev: string) =>
       dev === "USD" ? convertAmount(m, "USD", "XOF") : m;
 
     const [depResult, entResult, coffreResult, liensResult, pretsResult, investResult] =
       await Promise.all([
-        supabase.from("depenses").select("montant, devise, date_depense, titre, created_at").order("created_at", { ascending: false }),
-        supabase.from("entrees").select("montant, devise, date_entree, titre, created_at").order("created_at", { ascending: false }),
-        supabase.from("coffre_fort").select("id"),
-        supabase.from("liens_contacts").select("id"),
-        supabase.from("prets" as any).select("id").eq("statut", "en_attente"),
-        supabase.from("investissements" as any).select("id").eq("statut", "actif"),
+        supabase.from("depenses").select("montant, devise, date_depense, titre, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("entrees").select("montant, devise, date_entree, titre, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("coffre_fort").select("id").eq("user_id", userId),
+        supabase.from("liens_contacts").select("id").eq("user_id", userId),
+        supabase.from("prets" as any).select("id").eq("user_id", userId).eq("statut", "en_attente"),
+        supabase.from("investissements" as any).select("id").eq("user_id", userId).eq("statut", "actif"),
       ]);
 
     const deps = depResult.data || [];
