@@ -188,10 +188,10 @@ export default function AdminPanelPage() {
         supabase.from("nexora_logs" as any).select("*, nexora_users(nom_prenom, username)").order("created_at", { ascending: false }).limit(100),
       ]);
 
-      const u = (usersData as NexoraUser[]) || [];
-      const b = (boutiquesData as Boutique[]) || [];
-      const p = (produitsData as Produit[]) || [];
-      const c = (commandesData as Commande[]) || [];
+      const u = (usersData as unknown as NexoraUser[]) || [];
+      const b = (boutiquesData as unknown as Boutique[]) || [];
+      const p = (produitsData as unknown as Produit[]) || [];
+      const c = (commandesData as unknown as Commande[]) || [];
       const today = new Date().toDateString();
 
       setUsers(u);
