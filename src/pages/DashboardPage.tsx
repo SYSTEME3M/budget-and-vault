@@ -1,318 +1,520 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import BoutiqueLayout from "@/components/BoutiqueLayout";
+import { formatAmount, convertAmount } from "@/lib/app-utils";
+import AppLayout from "@/components/AppLayout";
 import {
-  ShoppingBag, Package, TrendingUp, Clock,
-  CheckCircle, Truck, XCircle, BarChart2
+  TrendingUp, TrendingDown, History, Clock,
+  ArrowUpRight, PiggyBank, HandCoins, Lock,
+  Store, BadgeCheck, Zap
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { getNexoraUser } from "@/lib/nexora-auth";
 
-type Periode = "jour" | "semaine" | "mois";
-
-interface Stat {
-  label: string;
-  valeur: number | string;
-  icon: any;
-  color: string;
-  bg: string;
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 5) return "Bonne nuit";
+  if (h < 12) return "Bonjour";
+  if (h < 18) return "Bon après-midi";
+  return "Bonsoir";
 }
 
-function formatMontant(amount: number, devise: string = "XOF"): string {
-  if (devise === "USD") return `$${amount.toFixed(2)}`;
-  return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
+function getDateStr() {
+  return new Date().toLocaleDateString("fr-FR", {
+    weekday: "long", year: "numeric",
+    month: "long", day: "numeric"
+  });
 }
 
-export default function BoutiqueAccueilPage() {
-  const [boutique, setBoutique] = useState<any>(null);
-  const [commandes, setCommandes] = useState<any[]>([]);
-  const [produits, setProduits] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [periode, setPeriode] = useState<Periode>("semaine");
+// ── Badge Premium vert brillant animé ────────────────────
+function PremiumBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "16px",
+        height: "16px",
+        borderRadius: "999px",
+        background: "linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)",
+        boxShadow: "0 0 8px 2px rgba(34,197,94,0.7), 0 0 2px 0 rgba(34,197,94,0.4)",
+        animation: "premiumPulse 2s ease-in-out infinite",
+        flexShrink: 0,
+        border: "1px solid rgba(255,255,255,0.3)",
+        position: "relative" as const,
+        overflow: "hidden",
+      }}>
 
-  const load = async () => {
-    setLoading(true);
-    const { data: b } = await supabase
-      .from("boutiques" as any).select("*").limit(1).single();
-    if (!b) { setLoading(false); return; }
-    setBoutique(b);
+      {/* Reflet brillant */}
+      <span style={{
+        position: "absolute",
+        top: 0, left: "-60%",
+        width: "40%", height: "100%",
+        background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
+        animation: "shine 2.5s ease-in-out infinite",
+        pointerEvents: "none",
+      }} />
 
-    const { data: cmds } = await supabase
-      .from("commandes" as any)
-      .select("*, articles_commande(*)")
-      .eq("boutique_id", (b as any).id)
-      .order("created_at", { ascending: false });
-    setCommandes(cmds as any[] || []);
+      <BadgeCheck style={{ width: 10, height: 10, color: "#fff", flexShrink: 0 }} />
+    </span>
+  );
+}
 
-    const { data: prods } = await supabase
-      .from("produits" as any)
-      .select("*")
-      .eq("boutique_id", (b as any).id);
-    setProduits(prods as any[] || []);
+export default function DashboardPage() {
+  const [devise, setDevise] = useState<"XOF" | "USD">("XOF");
+  const [time, setTime] = useState(new Date());
+  const [stats, setStats] = useState({
+    totalEntrees: 0,
+    totalDepenses: 0,
+    nbCoffre: 0,
+    nbLiens: 0,
+    nbPrets: 0,
+    nbInvest: 0,
+    dernièresDepenses: [] as any[],
+    dernièresEntrees: [] as any[],
+  });
+  const [loading, setLoading] = useState(true);
 
-    setLoading(false);
-  };
+  const nexoraUser = getNexoraUser();
+  const displayName = nexoraUser?.nom_prenom?.split(" ")[0] || "Eric";
+  const hasBadge = nexoraUser?.badge_premium || nexoraUser?.is_admin;
+  const isPremium = nexoraUser?.plan === "premium" || nexoraUser?.plan === "admin";
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    loadStats();
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  // Filtrer par période
-  const filtrerParPeriode = (liste: any[]) => {
-    const now = new Date();
-    return liste.filter(c => {
-      const date = new Date(c.created_at);
-      if (periode === "jour") {
-        return date.toDateString() === now.toDateString();
-      } else if (periode === "semaine") {
-        const diff = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
-        return diff <= 7;
-      } else {
-        return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-      }
-    });
-  };
+  const loadStats = async () => {
+    setLoading(true);
+    const toXOF = (m: number, dev: string) =>
+      dev === "USD" ? convertAmount(m, "USD", "XOF") : m;
 
-  const commandesFiltrees = filtrerParPeriode(commandes);
-  const totalMontant = commandesFiltrees.reduce((sum, c) => sum + (c.total || 0), 0);
+    const [depResult, entResult, coffreResult, liensResult, pretsResult, investResult] =
+      await Promise.all([
+        supabase.from("depenses").select("montant, devise, date_depense, titre, created_at").order("created_at", { ascending: false }),
+        supabase.from("entrees").select("montant, devise, date_entree, titre, created_at").order("created_at", { ascending: false }),
+        supabase.from("coffre_fort").select("id"),
+        supabase.from("liens_contacts").select("id"),
+        supabase.from("prets" as any).select("id").eq("statut", "en_attente"),
+        supabase.from("investissements" as any).select("id").eq("statut", "actif"),
+      ]);
 
-  // Stats par statut
-  const parStatut = (statut: string) => commandes.filter(c => c.statut === statut).length;
+    const deps = depResult.data || [];
+    const ents = entResult.data || [];
 
-  // Top produits vendus
-  const topProduits = () => {
-    const compteur: Record<string, { nom: string; quantite: number; montant: number }> = {};
-    commandes.forEach(cmd => {
-      (cmd.articles_commande || []).forEach((art: any) => {
-        if (!compteur[art.produit_id]) {
-          compteur[art.produit_id] = { nom: art.nom_produit, quantite: 0, montant: 0 };
-        }
-        compteur[art.produit_id].quantite += art.quantite;
-        compteur[art.produit_id].montant += art.montant;
-      });
-    });
-    return Object.values(compteur).sort((a, b) => b.quantite - a.quantite).slice(0, 5);
-  };
+    const totalEntrees = ents.reduce((s: number, e: any) => s + toXOF(Number(e.montant), e.devise), 0);
+    const totalDepenses = deps.reduce((s: number, d: any) => s + toXOF(Number(d.montant), d.devise), 0);
 
-  // Graphique par jour (7 derniers jours)
-  const graphData = () => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toDateString();
-      const cmdsJour = commandes.filter(c => new Date(c.created_at).toDateString() === dateStr);
-      days.push({
-        label: date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
-        commandes: cmdsJour.length,
-        montant: cmdsJour.reduce((sum, c) => sum + (c.total || 0), 0),
-      });
-    }
-    return days;
-  };
+    setStats({
+      totalEntrees,
+      totalDepenses,
+      nbCoffre: coffreResult.data?.length || 0,
+      nbLiens: liensResult.data?.length || 0,
+      nbPrets: (pretsResult.data as any)?.length || 0,
+      nbInvest: (investResult.data as any)?.length || 0,
+      dernièresDepenses: deps.slice(0, 4),
+      dernièresEntrees: ents.slice(0, 4),
+    });
+    setLoading(false);
+  };
 
-  const graph = graphData();
-  const maxMontant = Math.max(...graph.map(d => d.montant), 1);
+  const fmt = (v: number) =>
+    formatAmount(devise === "XOF" ? v : convertAmount(v, "XOF", "USD"), devise);
 
-  if (loading) return (
-    <BoutiqueLayout boutiqueName={boutique?.nom}>
-      <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    </BoutiqueLayout>
-  );
+  const clockStr = time.toLocaleTimeString("fr-FR", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
 
-  if (!boutique) return (
-    <BoutiqueLayout>
-      <div className="text-center py-20">
-        <p className="text-4xl mb-4">🏪</p>
-        <h2 className="text-xl font-bold text-gray-800">Boutique non configurée</h2>
-        <p className="text-gray-500 mt-2">Allez dans Paramètres pour créer votre boutique</p>
-        <a href="/boutique/parametres"
-          className="mt-4 inline-block bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold">
-          Configurer ma boutique
-        </a>
-      </div>
-    </BoutiqueLayout>
-  );
+  const solde = stats.totalEntrees - stats.totalDepenses;
 
-  return (
-    <BoutiqueLayout boutiqueName={boutique?.nom} boutiqueSlug={boutique?.slug}>
-      <div className="space-y-6">
+  return (
+    <AppLayout>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-gray-800">Dashboard</h1>
-            <p className="text-sm text-gray-500">Bienvenue dans votre boutique</p>
-          </div>
-          {/* Période */}
-          <div className="flex bg-gray-100 rounded-xl p-1">
-            {(["jour", "semaine", "mois"] as Periode[]).map(p => (
-              <button key={p} onClick={() => setPeriode(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors capitalize ${
-                  periode === p ? "bg-white text-pink-600 shadow" : "text-gray-500"
-                }`}>
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* ── Animations CSS injectées ── */}
+      <style>{`
+        @keyframes premiumPulse {
+          0%, 100% {
+            box-shadow: 0 0 6px 2px rgba(34,197,94,0.6), 0 0 2px 0 rgba(34,197,94,0.3);
+          }
+          50% {
+            box-shadow: 0 0 14px 5px rgba(34,197,94,0.9), 0 0 6px 2px rgba(74,222,128,0.6);
+          }
+        }
+        @keyframes shine {
+          0% { left: -60%; }
+          100% { left: 130%; }
+        }
+      `}</style>
 
-        {/* Stats principales */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4 text-pink-600" />
-              </div>
-              <p className="text-xs text-gray-500 font-medium">Commandes</p>
-            </div>
-            <p className="text-3xl font-black text-gray-800">{commandesFiltrees.length}</p>
-            <p className="text-xs text-gray-400 mt-1">ce{periode === "jour" ? "tte journée" : periode === "semaine" ? "tte semaine" : " mois"}</p>
-          </div>
+      <div
+        className="w-full overflow-hidden"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}>
 
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-              </div>
-              <p className="text-xs text-gray-500 font-medium">Revenus</p>
-            </div>
-            <p className="text-2xl font-black text-gray-800">
-              {Math.round(totalMontant).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">{boutique.devise || "FCFA"}</p>
-          </div>
+        {/* ══════════════════════════
+            HERO GREETING
+        ══════════════════════════ */}
+        <div
+          className="relative overflow-hidden rounded-xl bg-primary text-primary-foreground shadow-brand-lg"
+          style={{ padding: "12px 14px", flexShrink: 0 }}>
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full border-2 border-white" />
+            <div className="absolute -bottom-4 right-14 w-20 h-20 rounded-full border-2 border-white" />
+          </div>
+          <div className="relative flex items-center gap-3">
+            <div style={{ flex: 1, minWidth: 0 }}>
 
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Package className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-xs text-gray-500 font-medium">Produits</p>
-            </div>
-            <p className="text-3xl font-black text-gray-800">{produits.length}</p>
-            <p className="text-xs text-gray-400 mt-1">{produits.filter(p => p.actif).length} actifs</p>
-          </div>
+              {/* Nom + Badge */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                overflow: "hidden",
+              }}>
+                <div
+                  className="font-display font-black"
+                  style={{
+                    fontSize: "15px",
+                    lineHeight: "1.3",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    flexShrink: 1,
+                  }}>
+                  {getGreeting()}, {displayName} ! 👋
+                </div>
+                {/* ── Badge vert brillant ── */}
+                {isPremium && <PremiumBadge />}
+              </div>
 
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-yellow-600" />
-              </div>
-              <p className="text-xs text-gray-500 font-medium">En attente</p>
-            </div>
-            <p className="text-3xl font-black text-gray-800">{parStatut("nouvelle")}</p>
-            <p className="text-xs text-gray-400 mt-1">à traiter</p>
-          </div>
-        </div>
+              <div
+                className="text-primary-foreground/70 capitalize"
+                style={{
+                  fontSize: "11px",
+                  marginTop: "2px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}>
+                {getDateStr()}
+              </div>
 
-        {/* Statuts commandes */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-          <p className="font-bold text-gray-800 mb-3">Statuts des commandes</p>
-          <div className="space-y-2">
-            {[
-              { label: "Nouvelle", statut: "nouvelle", color: "bg-blue-500", icon: ShoppingBag },
-              { label: "Confirmée", statut: "confirmee", color: "bg-purple-500", icon: CheckCircle },
-              { label: "En préparation", statut: "en_preparation", color: "bg-yellow-500", icon: Package },
-              { label: "Expédiée", statut: "expediee", color: "bg-orange-500", icon: Truck },
-              { label: "Livrée", statut: "livree", color: "bg-green-500", icon: CheckCircle },
-              { label: "Annulée", statut: "annulee", color: "bg-red-400", icon: XCircle },
-            ].map(s => {
-              const count = parStatut(s.statut);
-              const pct = commandes.length > 0 ? (count / commandes.length) * 100 : 0;
-              return (
-                <div key={s.statut} className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500 w-28 flex-shrink-0">{s.label}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-2">
-                    <div className={`h-2 rounded-full ${s.color} transition-all`}
-                      style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="text-xs font-bold text-gray-700 w-6 text-right">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
+                <Clock style={{ width: 11, height: 11, color: "var(--accent)" }} />
+                <span
+                  className="font-mono font-black"
+                  style={{ fontSize: "11px", color: "var(--accent)", letterSpacing: "0.1em" }}>
+                  {clockStr}
+                </span>
+              </div>
+            </div>
 
-        {/* Graphique 7 derniers jours */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart2 className="w-5 h-5 text-pink-500" />
-            <p className="font-bold text-gray-800">7 derniers jours</p>
-          </div>
-          <div className="flex items-end gap-2 h-32">
-            {graph.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs text-gray-500 font-medium">
-                  {d.commandes > 0 ? d.commandes : ""}
-                </span>
-                <div className="w-full rounded-t-lg bg-pink-100 relative overflow-hidden"
-                  style={{ height: `${Math.max((d.montant / maxMontant) * 100, d.commandes > 0 ? 10 : 4)}%` }}>
-                  <div className="absolute inset-0 bg-pink-500 opacity-80" />
-                </div>
-                <span className="text-xs text-gray-400 text-center leading-tight">{d.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+            <select
+              value={devise}
+              onChange={(e) => setDevise(e.target.value as "XOF" | "USD")}
+              className="bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground rounded-lg font-semibold cursor-pointer"
+              style={{ padding: "4px 8px", fontSize: "11px", flexShrink: 0 }}>
+              <option value="XOF">XOF</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
 
-        {/* Top produits */}
-        {topProduits().length > 0 && (
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <p className="font-bold text-gray-800 mb-3">🏆 Top produits vendus</p>
-            <div className="space-y-2">
-              {topProduits().map((p, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white ${
-                      i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-400" : i === 2 ? "bg-orange-400" : "bg-gray-200"
-                    }`}>{i + 1}</span>
-                    <span className="text-sm font-medium text-gray-700 truncate max-w-40">{p.nom}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-pink-600">{p.quantite} vendus</p>
-                    <p className="text-xs text-gray-400">
-                      {Math.round(p.montant).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} {boutique.devise || "FCFA"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ══════════════════════════
+            SOLDE NET
+        ══════════════════════════ */}
+        <div
+          className={`rounded-xl border ${solde >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}
+          style={{ padding: "10px 14px", flexShrink: 0 }}>
+          <div
+            className="font-bold uppercase text-muted-foreground"
+            style={{ fontSize: "10px", letterSpacing: "0.05em", marginBottom: "2px" }}>
+            Solde net total
+          </div>
+          <div
+            className={`font-black font-display ${solde >= 0 ? "text-green-700" : "text-destructive"}`}
+            style={{
+              fontSize: "20px", lineHeight: 1.2,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+            {loading ? "—" : fmt(solde)}
+          </div>
+        </div>
 
-        {/* Dernières commandes */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-          <p className="font-bold text-gray-800 mb-3">Dernières commandes</p>
-          {commandes.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">Aucune commande pour l'instant</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {commandes.slice(0, 5).map(cmd => (
-                <div key={cmd.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">{cmd.client_nom}</p>
-                    <p className="text-xs text-gray-400">#{cmd.numero} • {new Date(cmd.created_at).toLocaleDateString("fr-FR")}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-pink-600">
-                      {Math.round(cmd.total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} {boutique.devise || "FCFA"}
-                    </p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      cmd.statut === "nouvelle" ? "bg-blue-100 text-blue-700" :
-                      cmd.statut === "livree" ? "bg-green-100 text-green-700" :
-                      cmd.statut === "annulee" ? "bg-red-100 text-red-700" :
-                      "bg-yellow-100 text-yellow-700"
-                    }`}>{cmd.statut}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* ══════════════════════════
+            ENTRÉES + DÉPENSES
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <Link
+            to="/entrees-depenses"
+            className="bg-card border border-border rounded-xl hover:shadow-brand transition-all"
+            style={{ padding: "10px 12px", overflow: "hidden" }}>
+            <div
+              className="font-bold text-green-600 uppercase flex items-center gap-1"
+              style={{ fontSize: "10px", letterSpacing: "0.05em", marginBottom: "4px" }}>
+              <TrendingUp style={{ width: 11, height: 11 }} /> Entrées
+            </div>
+            <div
+              className="font-black text-green-600"
+              style={{ fontSize: "17px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {loading ? "—" : fmt(stats.totalEntrees)}
+            </div>
+          </Link>
 
-      </div>
-    </BoutiqueLayout>
-  );
+          <Link
+            to="/entrees-depenses"
+            className="bg-card border border-border rounded-xl hover:shadow-brand transition-all"
+            style={{ padding: "10px 12px", overflow: "hidden" }}>
+            <div
+              className="font-bold text-destructive uppercase flex items-center gap-1"
+              style={{ fontSize: "10px", letterSpacing: "0.05em", marginBottom: "4px" }}>
+              <TrendingDown style={{ width: 11, height: 11 }} /> Dépenses
+            </div>
+            <div
+              className="font-black text-destructive"
+              style={{ fontSize: "17px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {loading ? "—" : fmt(stats.totalDepenses)}
+            </div>
+          </Link>
+        </div>
+
+        {/* ══════════════════════════
+            QUICK LINKS LIGNE 1
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+          {[
+            {
+              to: "/coffre-fort",
+              icon: <Lock style={{ width: 18, height: 18, color: "var(--primary)" }} />,
+              label: "Coffre-fort",
+              value: stats.nbCoffre,
+              cls: "bg-primary-bg border-primary/20",
+              textCls: "text-primary",
+            },
+            {
+              to: "/prets",
+              icon: <HandCoins style={{ width: 18, height: 18, color: "#f97316" }} />,
+              label: "Prêts",
+              value: stats.nbPrets,
+              cls: "bg-orange-50 border-orange-200",
+              textCls: "text-orange-600",
+            },
+            {
+              to: "/boutique",
+              icon: <Store style={{ width: 18, height: 18, color: "#ec4899" }} />,
+              label: "Boutique",
+              value: "→",
+              cls: "bg-pink-50 border-pink-200",
+              textCls: "text-pink-600",
+            },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`border rounded-xl card-hover flex flex-col items-center justify-center text-center ${item.cls}`}
+              style={{ padding: "10px 6px" }}>
+              {item.icon}
+              <div
+                className={`font-semibold ${item.textCls}`}
+                style={{ fontSize: "10px", marginTop: "4px", lineHeight: 1.2 }}>
+                {item.label}
+              </div>
+              <div
+                className={`font-display font-black ${item.textCls}`}
+                style={{ fontSize: "18px", marginTop: "2px", lineHeight: 1 }}>
+                {loading && item.value !== "→" ? "—" : item.value}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* ══════════════════════════
+            QUICK LINKS LIGNE 2
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+          <Link
+            to="/investissements"
+            className="bg-emerald-50 border border-emerald-200 rounded-xl card-hover flex flex-col items-center justify-center text-center"
+            style={{ padding: "10px 6px" }}>
+            <PiggyBank style={{ width: 18, height: 18, color: "#059669" }} />
+            <div className="font-semibold text-emerald-700" style={{ fontSize: "10px", marginTop: "4px" }}>
+              Investissements
+            </div>
+            <div className="font-display font-black text-emerald-700" style={{ fontSize: "18px", marginTop: "2px" }}>
+              {loading ? "—" : stats.nbInvest}
+            </div>
+          </Link>
+
+          <Link
+            to="/historique"
+            className="bg-destructive-bg border border-destructive/20 rounded-xl card-hover flex flex-col items-center justify-center text-center"
+            style={{ padding: "10px 6px" }}>
+            <History style={{ width: 18, height: 18, color: "var(--destructive)" }} />
+            <div className="font-semibold text-destructive" style={{ fontSize: "10px", marginTop: "4px" }}>
+              Historique
+            </div>
+            <div className="font-display font-black text-destructive" style={{ fontSize: "18px", marginTop: "2px" }}>
+              ↗
+            </div>
+          </Link>
+        </div>
+
+        {/* ══════════════════════════
+            TRANSACTIONS RÉCENTES
+        ══════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+
+          {/* Dépenses */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <span
+                className="font-display font-bold text-destructive flex items-center gap-1"
+                style={{ fontSize: "11px" }}>
+                <TrendingDown style={{ width: 12, height: 12 }} /> Dépenses
+              </span>
+              <Link
+                to="/entrees-depenses"
+                className="text-primary font-semibold flex items-center gap-0.5 hover:underline"
+                style={{ fontSize: "10px" }}>
+                Voir <ArrowUpRight style={{ width: 10, height: 10 }} />
+              </Link>
+            </div>
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              {loading ? (
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Chargement...
+                </div>
+              ) : stats.dernièresDepenses.length === 0 ? (
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Aucune dépense
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {stats.dernièresDepenses.map((d: any, i: number) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px" }}>
+                      <div
+                        className="bg-destructive/10 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ width: 22, height: 22 }}>
+                        <TrendingDown style={{ width: 11, height: 11, color: "var(--destructive)" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          className="font-medium"
+                          style={{ fontSize: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {d.titre}
+                        </div>
+                        <div className="text-muted-foreground" style={{ fontSize: "9px" }}>
+                          {d.date_depense}
+                        </div>
+                      </div>
+                      <div
+                        className="font-bold text-destructive"
+                        style={{ fontSize: "10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        -{fmt(d.devise === "USD" ? convertAmount(Number(d.montant), "USD", "XOF") : Number(d.montant))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Entrées */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <span
+                className="font-display font-bold text-green-600 flex items-center gap-1"
+                style={{ fontSize: "11px" }}>
+                <TrendingUp style={{ width: 12, height: 12 }} /> Entrées
+              </span>
+              <Link
+                to="/entrees-depenses"
+                className="text-primary font-semibold flex items-center gap-0.5 hover:underline"
+                style={{ fontSize: "10px" }}>
+                Voir <ArrowUpRight style={{ width: 10, height: 10 }} />
+              </Link>
+            </div>
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              {loading ? (
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Chargement...
+                </div>
+              ) : stats.dernièresEntrees.length === 0 ? (
+                <div className="text-center text-muted-foreground" style={{ padding: "10px", fontSize: "11px" }}>
+                  Aucune entrée
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {stats.dernièresEntrees.map((e: any, i: number) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px" }}>
+                      <div
+                        className="bg-green-100 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ width: 22, height: 22 }}>
+                        <TrendingUp style={{ width: 11, height: 11, color: "#16a34a" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          className="font-medium"
+                          style={{ fontSize: "10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {e.titre}
+                        </div>
+                        <div className="text-muted-foreground" style={{ fontSize: "9px" }}>
+                          {e.date_entree}
+                        </div>
+                      </div>
+                      <div
+                        className="font-bold text-green-600"
+                        style={{ fontSize: "10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        +{fmt(e.devise === "USD" ? convertAmount(Number(e.montant), "USD", "XOF") : Number(e.montant))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════════════════════
+            BANNIÈRE PREMIUM
+        ══════════════════════════ */}
+        {nexoraUser && nexoraUser.plan === "gratuit" && (
+          <div
+            className="bg-gradient-to-r from-primary to-primary/80 rounded-xl text-white"
+            style={{
+              padding: "10px 12px",
+              display: "flex", alignItems: "center",
+              gap: "10px", flexShrink: 0,
+            }}>
+            <Zap style={{ width: 20, height: 20, color: "#fde047", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="font-bold" style={{ fontSize: "12px" }}>Passez au Premium !</div>
+              <div
+                className="text-white/80"
+                style={{
+                  fontSize: "10px",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                Toutes les fonctionnalités illimitées — 10$/mois
+              </div>
+            </div>
+            <Link
+              to="/abonnement"
+              className="bg-yellow-400 text-gray-900 font-bold rounded-lg"
+              style={{ padding: "5px 10px", fontSize: "11px", flexShrink: 0, whiteSpace: "nowrap" }}>
+              Voir
+            </Link>
+          </div>
+        )}
+
+      </div>
+    </AppLayout>
+  );
 }
