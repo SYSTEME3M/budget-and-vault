@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
 
 // Pages principales
-import LoginPage from "@/pages/nexoraLoginPage"; // CORRIGÉ : nexora avec un 'e'
+import LoginPage from "@/pages/nexoraLoginPage"; 
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
 import EntreesPage from "@/pages/EntreesPage";
@@ -15,12 +15,12 @@ import CoffreFortPage from "@/pages/CoffreFortPage";
 import MediasPage from "@/pages/MediasPage";
 import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
-import AdminPage from "@/pages/AdminPage";
+import AdminPage from "@/pages/AdminPanelPage"; // CORRIGÉ : AdminPanelPage selon ton fichier
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
 
-// Boutique - Importations basées sur tes fichiers réels
+// Boutique
 import AccueilPage from "@/pages/boutique/AccueilPage";
 import CommandesPage from "@/pages/boutique/CommandesPage";
 import ParametresPage from "@/pages/boutique/ParametresPage";
