@@ -1,31 +1,41 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { isAuthenticated } from "@/lib/app-utils";
 
-export default function AuthGuard({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [isLoading, setIsLoading] = useState(true);
-  const [auth, setAuth] = useState(false);
+interface AuthGuardProps {
+  children: ReactNode;
+}
+
+export default function AuthGuard({ children }: AuthGuardProps) {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuth, setIsAuth] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      const result = isAuthenticated();
-      setAuth(result);
-      setIsLoading(false);
-      if (!result) {
-        navigate("/login", { replace: true });
-      }
-    }, 200);
-  }, [location.pathname]);
+    try {
+      const result = isAuthenticated(); // ⚡ stable check
+      setIsAuth(result);
+    } catch (err) {
+      console.error("Erreur AuthGuard:", err);
+      setIsAuth(false);
+    } finally {
+      setAuthChecked(true);
+    }
+  }, []);
 
-  if (isLoading) return (
-    <div className="flex items-center justify-center h-screen">
-      <p className="text-gray-500 text-lg">Chargement...</p>
-    </div>
-  );
+  // Affiche loader pendant le check
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-500 text-lg">Chargement...</p>
+      </div>
+    );
+  }
 
-  if (!auth) return null;
+  // Si non authentifié → redirect
+  if (!isAuth) {
+    return <Navigate to="/login" replace />;
+  }
 
+  // Auth ok → render children
   return <>{children}</>;
 }
