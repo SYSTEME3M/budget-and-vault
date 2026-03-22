@@ -1,69 +1,38 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { isNexoraAuthenticated, getNexoraUser } from "@/lib/nexora-auth";
+import { Navigate } from "react-router-dom";
+import { isNexoraAuthenticated } from "@/lib/nexora-auth";
 
-interface NexoraAuthGuardProps {
+interface AuthGuardProps {
   children: ReactNode;
-  requireAdmin?: boolean;
-  requirePremium?: boolean;
 }
 
-export default function NexoraAuthGuard({
-  children,
-  requireAdmin = false,
-  requirePremium = false,
-}: NexoraAuthGuardProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [isLoading, setIsLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+export default function AuthGuard({ children }: AuthGuardProps) {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuth, setIsAuth] = useState(false);
 
   useEffect(() => {
-    const check = () => {
-      if (!isNexoraAuthenticated()) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      const user = getNexoraUser();
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      if (requireAdmin && !user.is_admin) {
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-      if (requirePremium && user.plan === "gratuit") {
-        navigate("/abonnement", { replace: true });
-        return;
-      }
-      setAuthorized(true);
-      setIsLoading(false);
-    };
-    check();
-  }, [location.pathname]);
+    try {
+      const result = isNexoraAuthenticated();
+      setIsAuth(result);
+    } catch (err) {
+      console.error("Erreur AuthGuard:", err);
+      setIsAuth(false);
+    } finally {
+      setAuthChecked(true);
+    }
+  }, []);
 
-  if (isLoading) {
+  if (!authChecked) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-3">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-4 h-4 rounded-full bg-primary animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground font-medium">
-            Chargement...
-          </p>
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-500 text-lg">Chargement...</p>
       </div>
     );
   }
 
-  if (!authorized) return null;
+  if (!isAuth) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 }
