@@ -1,6 +1,9 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { isNexoraAuthenticated } from "@/lib/nexora-auth";
+import {
+  isNexoraAuthenticated,
+  refreshNexoraSession,
+} from "@/lib/nexora-auth";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -11,21 +14,37 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [isAuth, setIsAuth] = useState(false);
 
   useEffect(() => {
-    try {
-      const result = isNexoraAuthenticated();
-      setIsAuth(result);
-    } catch (err) {
-      console.error("Erreur AuthGuard:", err);
-      setIsAuth(false);
-    } finally {
-      setAuthChecked(true);
-    }
+    let mounted = true;
+
+    const checkAuth = async () => {
+      try {
+        await refreshNexoraSession();
+        const result = isNexoraAuthenticated();
+
+        if (!mounted) return;
+        setIsAuth(result);
+      } catch (error) {
+        console.error("Erreur AuthGuard:", error);
+        if (!mounted) return;
+        setIsAuth(false);
+      } finally {
+        if (mounted) {
+          setAuthChecked(true);
+        }
+      }
+    };
+
+    void checkAuth();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (!authChecked) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500 text-lg">Chargement...</p>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Chargement...</p>
       </div>
     );
   }
