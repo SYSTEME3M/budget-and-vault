@@ -5,7 +5,7 @@ export const NEXORA_SESSION_KEY = "nexora_session_token";
 export const NEXORA_USER_KEY = "nexora_current_user";
 export const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8h
 
-// ─── Hash sécurisé avec Web Crypto API (SHA-256 + sel) ──────
+// ─── Hash sécurisé SHA-256 ──────────────────────────────────
 export async function hashPassword(password: string): Promise<string> {
   const salt = "nexora_secure_salt_2025";
   const encoder = new TextEncoder();
@@ -15,7 +15,7 @@ export async function hashPassword(password: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ─── Générer token sécurisé avec crypto.getRandomValues ─────
+// ─── Générer token sécurisé ─────────────────────────────────
 export function generateToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -43,7 +43,6 @@ export async function registerUser(data: {
   email: string;
   password: string;
 }): Promise<{ success: boolean; error?: string }> {
-  // Validation mot de passe côté client
   const validation = validatePassword(data.password);
   if (!validation.valid) {
     return { success: false, error: validation.error };
@@ -123,12 +122,6 @@ export async function loginUser(data: {
     return { success: false, error: "Impossible de créer la session" };
   }
 
-  // Stocker la session avec l'expiration
-  const sessionData = {
-    token,
-    expires_at: Date.now() + SESSION_DURATION_MS,
-  };
-
   const userToStore: NexoraUser = {
     id: user.id,
     nom_prenom: user.nom_prenom,
@@ -141,7 +134,7 @@ export async function loginUser(data: {
   };
 
   const storage = data.remember ? localStorage : sessionStorage;
-  storage.setItem(NEXORA_SESSION_KEY, JSON.stringify(sessionData));
+  storage.setItem(NEXORA_SESSION_KEY, token);
   storage.setItem(NEXORA_USER_KEY, JSON.stringify(userToStore));
 
   return { success: true, user: userToStore };
@@ -149,50 +142,18 @@ export async function loginUser(data: {
 
 // ─── Déconnexion ────────────────────────────────────────────
 export async function logoutUser(): Promise<void> {
-  const token = getStoredToken();
+  const token =
+    localStorage.getItem(NEXORA_SESSION_KEY) ||
+    sessionStorage.getItem(NEXORA_SESSION_KEY);
 
   if (token) {
-    await supabase
-      .from("nexora_sessions")
-      .delete()
-      .eq("session_token", token);
+    await supabase.from("nexora_sessions").delete().eq("session_token", token);
   }
 
   localStorage.removeItem(NEXORA_SESSION_KEY);
   localStorage.removeItem(NEXORA_USER_KEY);
   sessionStorage.removeItem(NEXORA_SESSION_KEY);
   sessionStorage.removeItem(NEXORA_USER_KEY);
-}
-
-// ─── Récupérer le token stocké ──────────────────────────────
-function getStoredToken(): string | null {
-  try {
-    const raw =
-      localStorage.getItem(NEXORA_SESSION_KEY) ||
-      sessionStorage.getItem(NEXORA_SESSION_KEY);
-    if (!raw) return null;
-
-    // Support ancien format (string direct) et nouveau format (JSON)
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && parsed.token) {
-        // Vérifier expiration locale
-        if (parsed.expires_at && Date.now() > parsed.expires_at) {
-          localStorage.removeItem(NEXORA_SESSION_KEY);
-          localStorage.removeItem(NEXORA_USER_KEY);
-          sessionStorage.removeItem(NEXORA_SESSION_KEY);
-          sessionStorage.removeItem(NEXORA_USER_KEY);
-          return null;
-        }
-        return parsed.token;
-      }
-      return raw; // ancien format string
-    } catch {
-      return raw; // ancien format string
-    }
-  } catch {
-    return null;
-  }
 }
 
 // ─── Vérifier session ───────────────────────────────────────
@@ -209,7 +170,9 @@ export function getNexoraUser(): NexoraUser | null {
 }
 
 export function isNexoraAuthenticated(): boolean {
-  const token = getStoredToken();
+  const token =
+    localStorage.getItem(NEXORA_SESSION_KEY) ||
+    sessionStorage.getItem(NEXORA_SESSION_KEY);
   return !!token;
 }
 
@@ -226,7 +189,9 @@ export function hasNexoraPremium(): boolean {
 // ─── Rafraîchir session depuis Supabase ─────────────────────
 export async function refreshNexoraSession(): Promise<void> {
   try {
-    const token = getStoredToken();
+    const token =
+      localStorage.getItem(NEXORA_SESSION_KEY) ||
+      sessionStorage.getItem(NEXORA_SESSION_KEY);
     if (!token) return;
 
     const { data: session } = await supabase
@@ -297,11 +262,8 @@ export function validatePassword(password: string): { valid: boolean; error?: st
   return { valid: true };
 }
 
-// ─── Initialiser l'admin (sans mot de passe en dur) ─────────
+// ─── Initialiser l'admin ────────────────────────────────────
 export async function initAdminUser(): Promise<void> {
-  // Cette fonction vérifie seulement si l'admin existe.
-  // Le mot de passe admin doit être défini via Supabase Dashboard
-  // ou via une variable d'environnement, JAMAIS en dur dans le code.
   try {
     const { data: admin } = await supabase
       .from("nexora_users")
