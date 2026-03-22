@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { isAuthenticated } from "@/lib/app-utils";
+import { isNexoraAuthenticated } from "@/lib/nexora-auth";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -12,7 +12,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     try {
-      const result = isAuthenticated(); // ⚡ stable check
+      const result = isNexoraAuthenticated();
       setIsAuth(result);
     } catch (err) {
       console.error("Erreur AuthGuard:", err);
@@ -22,7 +22,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     }
   }, []);
 
-  // Affiche loader pendant le check
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -31,11 +30,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  // Si non authentifié → redirect
   if (!isAuth) {
     return <Navigate to="/login" replace />;
   }
 
-  // Auth ok → render children
   return <>{children}</>;
 }
