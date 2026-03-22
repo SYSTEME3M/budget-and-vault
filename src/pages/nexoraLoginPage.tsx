@@ -1,10 +1,8 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Shield, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { loginUser, registerUser, initAdminUser, isNexoraAuthenticated } from "@/lib/nexora-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,7 +35,7 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 export default function NexoraLoginPage() {
-  const router = useRouter(); // ✅ Next.js router
+  const navigate = useNavigate(); // ✅ Vite router
 
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
@@ -55,14 +53,15 @@ export default function NexoraLoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // ⚠️ sécurité Next.js (éviter crash SSR)
-    if (typeof window !== "undefined") {
+    try {
       initAdminUser();
 
       if (isNexoraAuthenticated()) {
-        router.push("/dashboard");
+        navigate("/dashboard");
         return;
       }
+    } catch (error) {
+      console.error("Erreur init:", error);
     }
 
     const timer = setTimeout(() => {
@@ -70,7 +69,7 @@ export default function NexoraLoginPage() {
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [router]);
+  }, []);
 
   if (!pageReady) {
     return (
@@ -98,7 +97,7 @@ export default function NexoraLoginPage() {
 
       if (result.success) {
         toast({ title: "Connexion réussie" });
-        router.push("/dashboard"); // ✅ Next.js navigation
+        navigate("/dashboard"); // ✅ Vite navigation
       } else {
         toast({
           title: "Erreur",
@@ -180,7 +179,7 @@ export default function NexoraLoginPage() {
             <form onSubmit={handleRegister} className="space-y-3">
               <Input value={nomPrenom} onChange={(e) => setNomPrenom(e.target.value)} placeholder="Nom" />
               <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
               <Input type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Mot de passe" />
               <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmer" />
               <Button className="w-full">Créer compte</Button>
