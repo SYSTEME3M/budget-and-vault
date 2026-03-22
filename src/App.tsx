@@ -15,12 +15,12 @@ import CoffreFortPage from "@/pages/CoffreFortPage";
 import MediasPage from "@/pages/MediasPage";
 import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
-import AdminPage from "@/pages/AdminPage";
+// import AdminPage from "@/pages/AdminPage"; // Désactivé car le fichier est introuvable
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
 
-// Boutique - Importations basées EXACTEMENT sur tes fichiers photos
+// Boutique - Importations basées sur tes fichiers
 import AccueilPage from "@/pages/boutique/AccueilPage";
 import CommandesPage from "@/pages/boutique/CommandesPage";
 import ParametresPage from "@/pages/boutique/ParametresPage";
@@ -55,16 +55,16 @@ const App = () => (
           <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
           <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
           <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
-          <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
+          {/* <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} /> */}
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          {/* ── Boutique Admin (Routes corrigées) ── */}
+          {/* ── Boutique Admin ── */}
           <Route path="/boutique" element={<AuthGuard><AccueilPage /></AuthGuard>} />
           <Route path="/boutique/produits" element={<AuthGuard><ProduitsPage /></AuthGuard>} />
           <Route path="/boutique/commandes" element={<AuthGuard><CommandesPage /></AuthGuard>} />
           <Route path="/boutique/parametres" element={<AuthGuard><ParametresPage /></AuthGuard>} />
 
-          {/* ── Vitrine publique (sans AuthGuard) ── */}
+          {/* ── Vitrine publique ── */}
           <Route path="/shop/:slug" element={<VitrinePage />} />
           <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
