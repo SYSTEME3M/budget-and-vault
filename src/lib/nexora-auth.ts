@@ -1,17 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// ─── Constantes ─────────────────────────────────────────────
 export const NEXORA_SESSION_KEY = "nexora_session_token";
 export const NEXORA_USER_KEY = "nexora_current_user";
 export const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8h
 
-// ─── Hash simplifié (base64)
+// ─── Hash simplifié (base64 + sel)
 export async function hashPassword(password: string): Promise<string> {
   return btoa(password + "_nexora_salt");
 }
 
 // ─── Générer token simple
 export function generateToken(): string {
-  return Math.random().toString(36).substring(2, 12) + Math.random().toString(36).substring(2, 12);
+  return Math.random().toString(36).substring(2, 12)
+       + Math.random().toString(36).substring(2, 12);
 }
 
 // ─── Types
@@ -133,4 +135,97 @@ export function isNexoraAuthenticated(): boolean {
     localStorage.getItem(NEXORA_SESSION_KEY) ||
     sessionStorage.getItem(NEXORA_SESSION_KEY);
   return !!token;
+}
+
+export function isNexoraAdmin(): boolean {
+  const user = getNexoraUser();
+  return user?.is_admin === true;
+}
+
+export function hasNexoraPremium(): boolean {
+  const user = getNexoraUser();
+  return user?.plan === "premium" || user?.plan === "admin";
+}
+
+// ─── Rafraîchir session depuis Supabase
+export async function refreshNexoraSession(): Promise<void> {
+  try {
+    const token =
+      localStorage.getItem(NEXORA_SESSION_KEY) ||
+      sessionStorage.getItem(NEXORA_SESSION_KEY);
+    if (!token) return;
+
+    const { data: session } = await supabase
+      .from("nexora_sessions")
+      .select("user_id, expires_at")
+      .eq("session_token", token)
+      .maybeSingle();
+
+    if (!session) return;
+
+    if (new Date((session as any).expires_at) < new Date()) return;
+
+    const { data: user } = await supabase
+      .from<NexoraUser>("nexora_users")
+      .select("*")
+      .eq("id", (session as any).user_id)
+      .maybeSingle();
+
+    if (!user) return;
+
+    if ((user as any).status === "suspendu" || (user as any).status === "bloque" || !(user as any).is_active) {
+      await logoutUser();
+      window.location.href = "/login";
+      return;
+    }
+
+    if (localStorage.getItem(NEXORA_SESSION_KEY)) {
+      localStorage.setItem(NEXORA_USER_KEY, JSON.stringify(user));
+    }
+    if (sessionStorage.getItem(NEXORA_SESSION_KEY)) {
+      sessionStorage.setItem(NEXORA_USER_KEY, JSON.stringify(user));
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
+// ─── Validation mot de passe
+export function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (password.length < 8) return { valid: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
+  if (!/[a-zA-Z]/.test(password)) return { valid: false, error: "Le mot de passe doit contenir au moins une lettre." };
+  if (!/[0-9]/.test(password)) return { valid: false, error: "Le mot de passe doit contenir au moins un chiffre." };
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return { valid: false, error: "Le mot de passe doit contenir au moins un caractère spécial." };
+  return { valid: true };
+}
+
+// ─── Initialiser l'admin
+export async function initAdminUser(): Promise<void> {
+  try {
+    const { data: admin } = await supabase
+      .from("nexora_users")
+      .select("*")
+      .eq("username", "systeme3m")
+      .maybeSingle();
+
+    if (admin && (admin as any).password_hash === "INIT") {
+      const adminHash = await hashPassword("55237685N");
+      await supabase.from("nexora_users").update({ password_hash: adminHash }).eq("id", admin.id);
+    }
+
+    if (!admin) {
+      const adminHash = await hashPassword("55237685N");
+      await supabase.from("nexora_users").insert({
+        nom_prenom: "Eric Kpakpo",
+        username: "systeme3m",
+        email: "erickpakpo786@gmail.com",
+        password_hash: adminHash,
+        is_admin: true,
+        plan: "admin",
+        badge_premium: true,
+      });
+    }
+  } catch {
+    // Silently fail
+  }
 }
