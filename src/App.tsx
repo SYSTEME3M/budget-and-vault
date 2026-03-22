@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
 
 // Pages principales
-import LoginPage from "@/pages/nexoraLoginPage"; 
+import LoginPage from "@/pages/LoginPage"; // On remet le standard
+import NexoraLoginPage from "@/pages/nexoraLoginPage"; // On garde Nexora au cas où
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
 import EntreesPage from "@/pages/EntreesPage";
@@ -15,7 +16,7 @@ import CoffreFortPage from "@/pages/CoffreFortPage";
 import MediasPage from "@/pages/MediasPage";
 import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
-import AdminPage from "@/pages/AdminPanelPage"; // CORRIGÉ : AdminPanelPage selon ton fichier
+import AdminPage from "@/pages/AdminPanelPage"; 
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
@@ -40,6 +41,7 @@ const App = () => (
         <Sonner />
         <Routes>
           {/* ── Auth ── */}
+          {/* Si tu veux utiliser Nexora, change LoginPage par NexoraLoginPage ici */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/login/admin" element={<LoginPage />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
