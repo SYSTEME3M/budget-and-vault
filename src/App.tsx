@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
+
 // Pages principales
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -18,14 +19,15 @@ import AdminPage from "@/pages/AdminPage";
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
-// Boutique - Nouvelles pages (dossier boutique/)
-import BoutiqueAccueilPage from "@/pages/boutique/AccueilPage";
-import BoutiqueProduitsPage from "@/pages/boutique/ProduitsPage";
-import ProduitsDigitauxPage from "@/pages/boutique/ProduitsDigitaux";
-import BoutiqueCommandesPage from "@/pages/boutique/CommandesPage";
-import BoutiqueParametresPage from "@/pages/boutique/ParametresPage";
-import BoutiqueVitrinePage from "@/pages/boutique/VitrinePage";
+
+// Boutique - Importations basées EXACTEMENT sur tes fichiers photos
+import AccueilPage from "@/pages/boutique/AccueilPage";
+import CommandesPage from "@/pages/boutique/CommandesPage";
+import ParametresPage from "@/pages/boutique/ParametresPage";
 import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
+import ProduitsPage from "@/pages/boutique/ProduitsPage";
+import VitrinePage from "@/pages/boutique/VitrinePage";
+
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,15 +58,14 @@ const App = () => (
           <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
           <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          {/* ── Boutique Admin ── */}
-          <Route path="/boutique" element={<AuthGuard><BoutiqueAccueilPage /></AuthGuard>} />
-          <Route path="/boutique/produits" element={<AuthGuard><BoutiqueProduitsPage /></AuthGuard>} />
-          <Route path="/boutique/produits-detail" element={<AuthGuard><ProduitDetailPage /></AuthGuard>} />
-          <Route path="/boutique/commandes" element={<AuthGuard><BoutiqueCommandesPage /></AuthGuard>} />
-          <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
+          {/* ── Boutique Admin (Routes corrigées) ── */}
+          <Route path="/boutique" element={<AuthGuard><AccueilPage /></AuthGuard>} />
+          <Route path="/boutique/produits" element={<AuthGuard><ProduitsPage /></AuthGuard>} />
+          <Route path="/boutique/commandes" element={<AuthGuard><CommandesPage /></AuthGuard>} />
+          <Route path="/boutique/parametres" element={<AuthGuard><ParametresPage /></AuthGuard>} />
 
           {/* ── Vitrine publique (sans AuthGuard) ── */}
-          <Route path="/shop/:slug" element={<BoutiqueVitrinePage />} />
+          <Route path="/shop/:slug" element={<VitrinePage />} />
           <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
           {/* ── 404 ── */}
