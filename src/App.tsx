@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
 
 // Pages principales
-import LoginPage from "@/pages/noxeraLoginPage"; // Mis à jour avec n minuscule
+import LoginPage from "@/pages/nexoraLoginPage"; // CORRIGÉ : nexora avec un 'e'
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
 import EntreesPage from "@/pages/EntreesPage";
