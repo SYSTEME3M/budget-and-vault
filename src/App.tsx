@@ -59,7 +59,7 @@ const App = () => (
           {/* ── Boutique Admin ── */}
           <Route path="/boutique" element={<AuthGuard><BoutiqueAccueilPage /></AuthGuard>} />
           <Route path="/boutique/produits" element={<AuthGuard><BoutiqueProduitsPage /></AuthGuard>} />
-          <Route path="/boutique/produits-digitaux" element={<AuthGuard><ProduitsDigitauxPage /></AuthGuard>} />
+          <Route path="/boutique/produits-detail" element={<AuthGuard><ProduitDetailPage /></AuthGuard>} />
           <Route path="/boutique/commandes" element={<AuthGuard><BoutiqueCommandesPage /></AuthGuard>} />
           <Route path="/boutique/parametres" element={<AuthGuard><BoutiqueParametresPage /></AuthGuard>} />
 
