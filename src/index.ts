@@ -2,7 +2,7 @@ export type TypeBien = "maison" | "terrain" | "appartement" | "boutique";
 export type Statut = "disponible" | "vendu" | "loue";
 
 export interface Annonce {
-  _id: string;
+  id: string; // Changé _id en id
   titre: string;
   description: string;
   prix: number;
@@ -16,8 +16,8 @@ export interface Annonce {
   favoris: string[];
   auteurId: string;
   auteurNom: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string; // Format Supabase standard
+  updated_at: string; // Format Supabase standard
 }
 
 export interface Filtres {
@@ -32,7 +32,7 @@ export interface Filtres {
 export interface AnnonceFormData {
   titre: string;
   description: string;
-  prix: string;
+  prix: number; // Mis en number pour correspondre à la DB
   type: TypeBien;
   ville: string;
   quartier: string;
