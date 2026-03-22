@@ -1,198 +1,82 @@
-import { useState, useEffect } from "react";
-import { Shield, CheckCircle2, XCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
-import { loginUser, registerUser, initAdminUser, isNexoraAuthenticated } from "@/lib/nexora-auth";
-import { useToast } from "@/hooks/use-toast";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom"; 
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import AuthGuard from "@/components/AuthGuard";
 
-type Mode = "login" | "register";
+// ❌ enlever PageLoader global
 
-function PasswordStrength({ password }: { password: string }) {
-  const checks = [
-    { label: "8 caractères minimum", ok: password.length >= 8 },
-    { label: "Une lettre", ok: /[a-zA-Z]/.test(password) },
-    { label: "Un chiffre", ok: /[0-9]/.test(password) },
-    { label: "Un caractère spécial", ok: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) },
-  ];
+// Pages
+import LoginPage from "@/pages/nexoraLoginPage"; 
+import DashboardPage from "@/pages/DashboardPage";
+import DepensesPage from "@/pages/DepensesPage";
+import EntreesPage from "@/pages/EntreesPage";
+import HistoriquePage from "@/pages/HistoriquePage";
+import CoffreFortPage from "@/pages/CoffreFortPage";
+import MediasPage from "@/pages/MediasPage";
+import LiensPage from "@/pages/LiensPage";
+import ProfilPage from "@/pages/ProfilPage";
+import AdminPage from "@/pages/AdminPanelPage"; 
+import PretsPage from "@/pages/PretsPage";
+import InvestissementsPage from "@/pages/InvestissementsPage";
+import FacturesPage from "@/pages/FacturesPage";
 
-  return (
-    <div className="mt-1 space-y-1">
-      {checks.map((c) => (
-        <div key={c.label} className="flex items-center gap-1.5 text-xs">
-          {c.ok ? (
-            <CheckCircle2 className="w-3 h-3 text-green-500" />
-          ) : (
-            <XCircle className="w-3 h-3 text-muted-foreground" />
-          )}
-          <span className={c.ok ? "text-green-600" : "text-muted-foreground"}>
-            {c.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
+// Boutique
+import AccueilPage from "@/pages/boutique/AccueilPage";
+import CommandesPage from "@/pages/boutique/CommandesPage";
+import ParametresPage from "@/pages/boutique/ParametresPage";
+import ProduitDetailPage from "@/pages/boutique/ProduitDetailPage";
+import ProduitsPage from "@/pages/boutique/ProduitsPage";
+import VitrinePage from "@/pages/boutique/VitrinePage";
 
-export default function NexoraLoginPage() {
-  const navigate = useNavigate(); // ✅ Vite router
+import NotFound from "@/pages/NotFound";
 
-  const [mode, setMode] = useState<Mode>("login");
-  const [loading, setLoading] = useState(false);
-  const [pageReady, setPageReady] = useState(false);
+const queryClient = new QueryClient();
 
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
 
-  const [nomPrenom, setNomPrenom] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+        <Routes>
+          {/* Auth */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-  const { toast } = useToast();
+          {/* Protégé */}
+          <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+          <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
+          <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
+          <Route path="/historique" element={<AuthGuard><HistoriquePage /></AuthGuard>} />
+          <Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
+          <Route path="/investissements" element={<AuthGuard><InvestissementsPage /></AuthGuard>} />
+          <Route path="/factures" element={<AuthGuard><FacturesPage /></AuthGuard>} />
+          <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
+          <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
+          <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
+          <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
+          <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-  useEffect(() => {
-    try {
-      initAdminUser();
+          {/* Boutique */}
+          <Route path="/boutique" element={<AuthGuard><AccueilPage /></AuthGuard>} />
+          <Route path="/boutique/produits" element={<AuthGuard><ProduitsPage /></AuthGuard>} />
+          <Route path="/boutique/commandes" element={<AuthGuard><CommandesPage /></AuthGuard>} />
+          <Route path="/boutique/parametres" element={<AuthGuard><ParametresPage /></AuthGuard>} />
 
-      if (isNexoraAuthenticated()) {
-        navigate("/dashboard");
-        return;
-      }
-    } catch (error) {
-      console.error("Erreur init:", error);
-    }
+          {/* Vitrine */}
+          <Route path="/shop/:slug" element={<VitrinePage />} />
+          <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
-    const timer = setTimeout(() => {
-      setPageReady(true);
-    }, 800);
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
 
-    return () => clearTimeout(timer);
-  }, []);
+      </TooltipProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
+);
 
-  if (!pageReady) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black text-white">
-        <Shield className="w-16 h-16 animate-pulse text-yellow-400" />
-      </div>
-    );
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!identifier || !password) {
-      toast({ title: "Champs requis", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await loginUser({
-        identifier,
-        password,
-      });
-
-      if (result.success) {
-        toast({ title: "Connexion réussie" });
-        navigate("/dashboard"); // ✅ Vite navigation
-      } else {
-        toast({
-          title: "Erreur",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({ title: "Erreur réseau", variant: "destructive" });
-    }
-
-    setLoading(false);
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!nomPrenom || !username || !email || !regPassword || !confirmPassword) {
-      toast({ title: "Champs requis", variant: "destructive" });
-      return;
-    }
-
-    if (regPassword !== confirmPassword) {
-      toast({ title: "Mot de passe incorrect", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await registerUser({
-        nom_prenom: nomPrenom,
-        username,
-        email,
-        password: regPassword,
-      });
-
-      if (result.success) {
-        toast({ title: "Compte créé" });
-        setMode("login");
-      } else {
-        toast({
-          title: "Erreur",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({ title: "Erreur réseau", variant: "destructive" });
-    }
-
-    setLoading(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-sm">
-        <div className="border rounded-xl p-6 shadow">
-          <h1 className="text-xl font-bold mb-4 text-center">NEXORA</h1>
-
-          {mode === "login" ? (
-            <form onSubmit={handleLogin} className="space-y-3">
-              <Input
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="Email ou username"
-              />
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mot de passe"
-              />
-              <Button className="w-full" disabled={loading}>
-                Connexion
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister} className="space-y-3">
-              <Input value={nomPrenom} onChange={(e) => setNomPrenom(e.target.value)} placeholder="Nom" />
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-              <Input type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} placeholder="Mot de passe" />
-              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmer" />
-              <Button className="w-full">Créer compte</Button>
-            </form>
-          )}
-
-          <div className="text-center mt-4 text-sm">
-            <button onClick={() => setMode(mode === "login" ? "register" : "login")}>
-              {mode === "login" ? "Créer un compte" : "Se connecter"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+export default App;
