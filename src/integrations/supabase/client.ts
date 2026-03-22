@@ -1,37 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Récupération des clés avec une sécurité (fallback vide pour éviter le crash)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-const NEXORA_SESSION_KEY = "nexora_session_token";
+// Vérification dans la console (visible uniquement en développement)
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.warn("⚠️ Attention : Les clés Supabase sont manquantes dans le fichier .env");
+}
 
-function getNexoraToken(): string {
+// Création du client simplifiée pour éviter l'erreur "f is not defined"
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
+
+// Fonction utilitaire si tu as besoin de ton token Nexora ailleurs
+export const getNexoraToken = () => {
   try {
-    return localStorage.getItem(NEXORA_SESSION_KEY)
-      || sessionStorage.getItem(NEXORA_SESSION_KEY)
-      || "";
+    return localStorage.getItem("nexora_session_token") || "";
   } catch {
     return "";
   }
-}
-
-function createSupabaseClient() {
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      storage: localStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-    global: {
-      fetch: (url, options = {}) => {
-        const token = getNexoraToken();
-        const headers = new Headers((options as any).headers || {});
-        if (token) headers.set("x-nexora-token", token);
-        return fetch(url, { ...options, headers });
-      }
-    }
-  });
-}
-
-export const supabase = createSupabaseClient();
+};
