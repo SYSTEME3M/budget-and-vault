@@ -5,8 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
 
-// Pages principales
-import LoginPage from "@/pages/nexoraLoginPage"; // POINTÉ SUR TON FICHIER RÉEL
+// Import du Loader que tu viens de me donner
+import PageLoader from "@/components/PageLoader"; 
+
+// Pages principales (Noms de fichiers exacts)
+import LoginPage from "@/pages/nexoraLoginPage"; 
 import DashboardPage from "@/pages/DashboardPage";
 import DepensesPage from "@/pages/DepensesPage";
 import EntreesPage from "@/pages/EntreesPage";
@@ -15,7 +18,7 @@ import CoffreFortPage from "@/pages/CoffreFortPage";
 import MediasPage from "@/pages/MediasPage";
 import LiensPage from "@/pages/LiensPage";
 import ProfilPage from "@/pages/ProfilPage";
-import AdminPage from "@/pages/AdminPanelPage"; // POINTÉ SUR TON FICHIER RÉEL
+import AdminPage from "@/pages/AdminPanelPage"; 
 import PretsPage from "@/pages/PretsPage";
 import InvestissementsPage from "@/pages/InvestissementsPage";
 import FacturesPage from "@/pages/FacturesPage";
@@ -35,38 +38,45 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/login/admin" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* On enveloppe TOUTE l'application dans le PageLoader */}
+      <PageLoader>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            {/* ── Authentification ── */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
 
-          <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
-          <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
-          <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
-          <Route path="/historique" element={<AuthGuard><HistoriquePage /></AuthGuard>} />
-          <Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
-          <Route path="/investissements" element={<AuthGuard><InvestissementsPage /></AuthGuard>} />
-          <Route path="/factures" element={<AuthGuard><FacturesPage /></AuthGuard>} />
-          <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
-          <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
-          <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
-          <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
-          <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
+            {/* ── Routes Protégées (AuthGuard) ── */}
+            <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+            <Route path="/entrees" element={<AuthGuard><EntreesPage /></AuthGuard>} />
+            <Route path="/depenses" element={<AuthGuard><DepensesPage /></AuthGuard>} />
+            <Route path="/historique" element={<AuthGuard><HistoriquePage /></AuthGuard>} />
+            <Route path="/prets" element={<AuthGuard><PretsPage /></AuthGuard>} />
+            <Route path="/investissements" element={<AuthGuard><InvestissementsPage /></AuthGuard>} />
+            <Route path="/factures" element={<AuthGuard><FacturesPage /></AuthGuard>} />
+            <Route path="/coffre-fort" element={<AuthGuard><CoffreFortPage /></AuthGuard>} />
+            <Route path="/medias" element={<AuthGuard><MediasPage /></AuthGuard>} />
+            <Route path="/liens" element={<AuthGuard><LiensPage /></AuthGuard>} />
+            <Route path="/admin" element={<AuthGuard><AdminPage /></AuthGuard>} />
+            <Route path="/profil" element={<AuthGuard><ProfilPage /></AuthGuard>} />
 
-          <Route path="/boutique" element={<AuthGuard><AccueilPage /></AuthGuard>} />
-          <Route path="/boutique/produits" element={<AuthGuard><ProduitsPage /></AuthGuard>} />
-          <Route path="/boutique/commandes" element={<AuthGuard><CommandesPage /></AuthGuard>} />
-          <Route path="/boutique/parametres" element={<AuthGuard><ParametresPage /></AuthGuard>} />
+            {/* ── Boutique ── */}
+            <Route path="/boutique" element={<AuthGuard><AccueilPage /></AuthGuard>} />
+            <Route path="/boutique/produits" element={<AuthGuard><ProduitsPage /></AuthGuard>} />
+            <Route path="/boutique/commandes" element={<AuthGuard><CommandesPage /></AuthGuard>} />
+            <Route path="/boutique/parametres" element={<AuthGuard><ParametresPage /></AuthGuard>} />
 
-          <Route path="/shop/:slug" element={<VitrinePage />} />
-          <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
+            {/* ── Vitrine ── */}
+            <Route path="/shop/:slug" element={<VitrinePage />} />
+            <Route path="/shop/:slug/produit/:produitId" element={<ProduitDetailPage />} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
+            {/* ── 404 ── */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </PageLoader>
     </BrowserRouter>
   </QueryClientProvider>
 );
