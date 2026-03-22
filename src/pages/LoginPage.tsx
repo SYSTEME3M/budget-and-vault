@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Lock, Shield } from "lucide-react";
+import { Eye, EyeOff, Lock, Shield, User } from "lucide-react"; // Ajout de User
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useLocation } from "react-router-dom";
 import { verifyAccessCode, verifyUserToken, ensureProfile, setSession, setUserSession } from "@/lib/app-utils";
 import { useToast } from "@/hooks/use-toast";
-import avatarMale from "@/assets/avatar-male.png";
 
 export default function LoginPage() {
   const [code, setCode] = useState("");
@@ -78,15 +77,16 @@ export default function LoginPage() {
         {/* ── Carte principale ── */}
         <div className="bg-card border border-border rounded-2xl shadow-brand-lg overflow-hidden">
 
-          {/* ── Header avec avatar ── */}
+          {/* ── Header avec icône (remplace l'image supprimée) ── */}
           <div className="bg-primary px-8 py-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full border-2 border-white" />
               <div className="absolute -bottom-4 right-16 w-20 h-20 rounded-full border-2 border-white" />
             </div>
             <div className="relative inline-block mb-3">
-              <div className="w-24 h-24 rounded-full border-4 border-accent overflow-hidden mx-auto shadow-brand-lg">
-                <img src={avatarMale} alt="Avatar" className="w-full h-full object-cover" />
+              <div className="w-24 h-24 rounded-full border-4 border-accent bg-white flex items-center justify-center mx-auto shadow-brand-lg">
+                {/* Utilisation d'une icône User à la place de l'image PNG */}
+                <User className="w-12 h-12 text-primary" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-accent rounded-full flex items-center justify-center shadow-sm">
                 <Shield className="w-4 h-4 text-accent-foreground" />
@@ -145,7 +145,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* ── Points décoratifs ── */}
             <div className="mt-5 flex justify-center gap-3">
               <div className="w-3 h-3 rounded-full bg-primary" />
               <div className="w-3 h-3 rounded-full bg-accent" />
